@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import List
 
 
 class PredictRequest(BaseModel):
@@ -12,8 +13,10 @@ class PredictRequest(BaseModel):
 
 class PredictResponse(BaseModel):
     overall_score: float
+    risk_level: str
     cardio_score: float
     glucose_score: float
     fatigue_level: str
+    trend_flags: List[str]
     recommendation: str
     doctor_review_required: bool

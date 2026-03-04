@@ -1,22 +1,10 @@
 from typing import Dict, List, Optional, Union
 
+from utils.helpers import calculate_slope, clamp_score
+
 
 def slope(values: List[float]) -> float:
-    series = [float(v) for v in values if v is not None]
-    n = len(series)
-    if n < 2:
-        return 0.0
-    x_mean = (n - 1) / 2
-    y_mean = sum(series) / n
-    num = 0.0
-    den = 0.0
-    for i, y in enumerate(series):
-        dx = i - x_mean
-        num += dx * (y - y_mean)
-        den += dx * dx
-    if den == 0:
-        return 0.0
-    return num / den
+    return calculate_slope(values)
 
 
 def analyze_trends(
@@ -53,5 +41,5 @@ def analyze_trends(
         "glucose_slope": round(glucose_slope, 3),
         "workout_slope": round(workout_slope, 3),
         "trend_flags": trend_flags,
-        "trend_risk": round(min(trend_risk, 3.0), 2),
+        "trend_risk": round(clamp_score(trend_risk, lower=0.0, upper=3.0), 2),
     }

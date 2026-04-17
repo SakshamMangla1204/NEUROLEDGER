@@ -1,28 +1,18 @@
-const express = require("express");
-const cors = require("cors");
 require("dotenv").config();
-
-const connectDB = require("./config/db");
-const authRoutes = require("./routes/authRoutes");
+const cors = require("cors");
+const express = require("express");
+const healthRoutes = require("./routes/healthRoutes");
 
 const app = express();
-
-/* DATABASE CONNECTION */
-connectDB();
-
-/* MIDDLEWARE */
-app.use(cors());
-app.use(express.json());
-
-/* ROUTES */
-app.use("/api/auth", authRoutes);
-
-app.get("/", (req, res) => {
-    res.send("NeuroLedger Backend Running");
-});
-
 const PORT = process.env.PORT || 5000;
 
+app.use(cors());
+app.use(express.json());
+app.get("/", (req, res) => {
+  res.status(200).json({ message: "NeuroLedger backend is running" });
+});
+app.use("/", healthRoutes);
+
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  console.log(`Backend server running on http://127.0.0.1:${PORT}`);
 });

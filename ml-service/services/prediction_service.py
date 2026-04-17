@@ -61,9 +61,11 @@ def predict_health(health_data: PredictRequest) -> PredictResponse:
     )
 
     guardrail_result = enforce_guardrails(
-        recommendation="Increase hydration, improve sleep, and retest key vitals in 72 hours.",
-        risk_level=risk_level,
-        doctor_review_required=doctor_review_required,
+        overall_score=overall_score,
+        trend_flags=trend_result["trend_flags"],
+    )
+    doctor_review_required = (
+        doctor_review_required or guardrail_result["doctor_review_required"]
     )
 
     response = PredictResponse(
@@ -72,9 +74,9 @@ def predict_health(health_data: PredictRequest) -> PredictResponse:
         cardio_score=round(cardio_score, 2),
         glucose_score=round(glucose_score, 2),
         fatigue_level=fatigue,
-        trend_flags=trend_result["trend_flags"],
+        trend_flags=guardrail_result["trend_flags"],
         recommendation=guardrail_result["recommendation"],
-        doctor_review_required=guardrail_result["doctor_review_required"],
+        doctor_review_required=doctor_review_required,
     )
     log_event(
         logger,

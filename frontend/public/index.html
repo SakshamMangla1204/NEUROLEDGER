@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NeuroLedger Prototype</title>
+    <link rel="stylesheet" href="/app/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">NeuroLedger Prototype</p>
+        <h1>Simulated ABHA verification, ML insights, and report integrity in one flow.</h1>
+        <p class="subtitle">
+          This frontend is served by the backend so we can exercise the aligned prototype
+          architecture without waiting on cloud storage or live ABHA integration.
+        </p>
+      </section>
+
+      <section class="panel" id="profiles-panel">
+        <div class="panel-header">
+          <h2>Known Mock Identities</h2>
+          <button id="refreshProfiles">Refresh</button>
+        </div>
+        <div id="profiles" class="card-grid"></div>
+      </section>
+
+      <section class="panel two-col">
+        <form id="registrationForm" class="stack">
+          <h2>1. Create Mock ABHA Identity</h2>
+          <label>Name <input id="name" name="name" placeholder="Saksham Mangla" required /></label>
+          <label>DOB <input id="dob" name="dob" type="date" required /></label>
+          <label>Phone <input id="phone" name="phone" placeholder="9876543210" required /></label>
+          <label>ABHA-like ID <input id="abhaId" name="abhaId" placeholder="saksham@abdm" required /></label>
+          <button type="submit">Register Identity</button>
+          <pre id="registrationOutput" class="output"></pre>
+        </form>
+
+        <form id="verificationForm" class="stack">
+          <h2>2. Verify Identity</h2>
+          <label>ABHA-like ID <input id="verifyAbhaId" name="verifyAbhaId" placeholder="saksham@abdm" required /></label>
+          <button type="submit">Verify Identity</button>
+          <pre id="verificationOutput" class="output"></pre>
+        </form>
+      </section>
+
+      <section class="panel two-col">
+        <form id="analysisForm" class="stack">
+          <h2>3. Manual Health Analysis</h2>
+          <label>Resting Heart Rate <input name="resting_heart_rate" type="number" value="72" required /></label>
+          <label>SpO2 <input name="spo2" type="number" value="98" required /></label>
+          <label>Glucose <input name="glucose" type="number" value="104" required /></label>
+          <label>Sleep Hours <input name="sleep_hours" type="number" step="0.1" value="7.5" required /></label>
+          <label>Workout Minutes <input name="workout_minutes" type="number" value="40" required /></label>
+          <label>Age <input name="age" type="number" value="28" required /></label>
+          <button type="submit">Generate Insights</button>
+          <pre id="analysisOutput" class="output"></pre>
+        </form>
+
+        <form id="uploadForm" class="stack">
+          <h2>4. Upload Medical Report</h2>
+          <label>
+            Notes
+            <input id="reportNotes" name="notes" placeholder="CBC report or discharge summary" />
+          </label>
+          <label>
+            File
+            <input id="reportFile" name="reportFile" type="file" required />
+          </label>
+          <button type="submit">Store Report + Hash</button>
+          <pre id="uploadOutput" class="output"></pre>
+        </form>
+      </section>
+
+      <section class="panel two-col">
+        <div class="stack">
+          <h2>5. Wearable Data API</h2>
+          <button id="syncWearable">Sync Wearable Data</button>
+          <button id="analyzeWearable">Run Wearable-Based Analysis</button>
+          <pre id="wearableOutput" class="output"></pre>
+        </div>
+
+        <div class="stack">
+          <h2>6. Patient Dashboard</h2>
+          <button id="loadDashboard">Load Dashboard</button>
+          <pre id="dashboardOutput" class="output large"></pre>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>7. Blockchain Final Step</h2>
+          <button id="finalizeBlockchain">Finalize Latest Report</button>
+        </div>
+        <pre id="blockchainOutput" class="output"></pre>
+      </section>
+    </main>
+
+    <script src="/app/app.js"></script>
+  </body>
+</html>

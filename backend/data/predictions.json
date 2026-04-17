@@ -1,0 +1,50 @@
+[
+  {
+    "predictionId": "279872c4-27f6-416f-8c29-c59ac6080231",
+    "abhaId": "SAKSHAM@ABDM",
+    "createdAt": "2026-04-17T19:52:05.775Z",
+    "input": {
+      "resting_heart_rate": 72,
+      "spo2": 98,
+      "glucose": 104,
+      "sleep_hours": 7.5,
+      "workout_minutes": 40,
+      "age": 28
+    },
+    "prediction": {
+      "overall_score": 99.33,
+      "risk_level": "low",
+      "cardio_score": 98.33,
+      "glucose_score": 100,
+      "fatigue_level": "low",
+      "trend_flags": [],
+      "recommendation": "Increase sleep recovery. Consult doctor if symptoms persist. Doctor confirmation is required before acting on this output.",
+      "doctor_review_required": false
+    }
+  },
+  {
+    "predictionId": "426ca167-ce34-4b12-ba46-254364c767ed",
+    "abhaId": "SAKSHAM@ABDM",
+    "createdAt": "2026-04-17T19:55:52.599Z",
+    "input": {
+      "resting_heart_rate": 90,
+      "spo2": 96,
+      "glucose": 90,
+      "sleep_hours": 6.8,
+      "workout_minutes": 60,
+      "age": 22
+    },
+    "source": "simulated_wearable_api",
+    "wearableSyncId": "3e72ce98-2526-47b4-afd7-77f4b6473336",
+    "prediction": {
+      "overall_score": 100,
+      "risk_level": "low",
+      "cardio_score": 100,
+      "glucose_score": 100,
+      "fatigue_level": "low",
+      "trend_flags": [],
+      "recommendation": "Increase sleep recovery. Consult doctor if symptoms persist. Doctor confirmation is required before acting on this output.",
+      "doctor_review_required": false
+    }
+  }
+]

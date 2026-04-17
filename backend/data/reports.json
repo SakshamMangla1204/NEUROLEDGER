@@ -1,0 +1,34 @@
+[
+  {
+    "reportId": "06d72f88-8d52-41c8-b2cf-eb630fde0614",
+    "abhaId": "SAKSHAM@ABDM",
+    "originalFileName": "report.txt",
+    "mimeType": "text/plain",
+    "sizeBytes": 23,
+    "uploadedAt": "2026-04-17T19:52:05.777Z",
+    "notes": "demo upload",
+    "storedFileName": "06d72f88-8d52-41c8-b2cf-eb630fde0614-report.txt",
+    "filePath": "/Users/sakshammangla/Documents/Neuroledger/backend/storage/reports/06d72f88-8d52-41c8-b2cf-eb630fde0614-report.txt",
+    "fileUrl": "/api/reports/06d72f88-8d52-41c8-b2cf-eb630fde0614/file",
+    "sha256": "590d9a82dff3741b501851dac92580a652c3cbb010d78982e722ef0cd1466687",
+    "integrityStatus": "hash_recorded_locally",
+    "blockchainStatus": "pending_external_sync"
+  },
+  {
+    "reportId": "8ca811d6-d9c2-4141-bbdf-c52b52c412e0",
+    "abhaId": "SAKSHAM@ABDM",
+    "originalFileName": "wearable-report.txt",
+    "mimeType": "text/plain",
+    "sizeBytes": 22,
+    "uploadedAt": "2026-04-17T19:55:52.600Z",
+    "notes": "wearable demo upload",
+    "storedFileName": "8ca811d6-d9c2-4141-bbdf-c52b52c412e0-wearable-report.txt",
+    "filePath": "/Users/sakshammangla/Documents/Neuroledger/backend/storage/reports/8ca811d6-d9c2-4141-bbdf-c52b52c412e0-wearable-report.txt",
+    "fileUrl": "/api/reports/8ca811d6-d9c2-4141-bbdf-c52b52c412e0/file",
+    "sha256": "e24d161b87ce787ac556e2f3d342aa887532e26cd76b5f3706805c935a90482a",
+    "integrityStatus": "hash_recorded_locally",
+    "blockchainStatus": "anchored_to_mock_chain",
+    "blockchainAnchorId": "1c5253f7-c991-47ef-b911-afb1ab04b961",
+    "finalizedAt": "2026-04-17T19:55:52.601Z"
+  }
+]

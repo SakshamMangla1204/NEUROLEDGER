@@ -8,7 +8,7 @@ async function checkMlHealth() {
 }
 
 async function predictHealth(payload) {
-  const response = await axios.post(`${ML_BASE_URL}/predict`, { features: payload }, {
+  const response = await axios.post(`${ML_BASE_URL}/predict`, payload, {
     timeout: 15000,
   });
   return response.data;

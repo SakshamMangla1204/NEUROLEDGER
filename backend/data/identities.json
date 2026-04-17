@@ -1,0 +1,34 @@
+[
+  {
+    "name": "Saksham Mangla",
+    "dob": "2003-09-28",
+    "phone": "9876543210",
+    "abhaId": "SAKSHAM@ABDM",
+    "linkedReports": [
+      "06d72f88-8d52-41c8-b2cf-eb630fde0614",
+      "8ca811d6-d9c2-4141-bbdf-c52b52c412e0"
+    ],
+    "createdAt": "2026-04-17T19:52:05.758Z",
+    "mode": "simulated_abha_identity",
+    "updatedAt": "2026-04-17T19:59:04.084Z",
+    "metrics": [
+      {
+        "abha_id": "SAKSHAM@ABDM",
+        "heart_rate": 82,
+        "steps": 5400,
+        "sleep_hours": 6.4,
+        "glucose": 95,
+        "received_at": "2026-04-17T19:59:04.079Z",
+        "source": "health_connect_bridge",
+        "normalized_signals": {
+          "heart_rate": "NORMAL",
+          "sleep_hours": "OK",
+          "steps": "MODERATE",
+          "glucose": "SAFE"
+        },
+        "risk_score": 0,
+        "risk_level": "LOW"
+      }
+    ]
+  }
+]

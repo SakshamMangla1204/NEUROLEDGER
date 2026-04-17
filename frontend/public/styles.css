@@ -1,0 +1,150 @@
+:root {
+  --bg: #f3efe6;
+  --panel: #fffaf2;
+  --ink: #1d2433;
+  --muted: #596579;
+  --line: #c9bea7;
+  --accent: #0d7a66;
+  --accent-2: #d47b34;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(212, 123, 52, 0.16), transparent 28%),
+    linear-gradient(180deg, #f6f2ea 0%, #ece3d3 100%);
+  color: var(--ink);
+}
+
+.shell {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0 56px;
+}
+
+.hero {
+  padding: 24px 0 8px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+
+h1,
+h2,
+strong {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+h1 {
+  margin: 0 0 12px;
+  max-width: 780px;
+  line-height: 1.1;
+}
+
+.subtitle {
+  max-width: 760px;
+  color: var(--muted);
+}
+
+.panel {
+  background: rgba(255, 250, 242, 0.84);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 10px 30px rgba(45, 45, 45, 0.06);
+  backdrop-filter: blur(4px);
+}
+
+.panel-header,
+.two-col {
+  display: grid;
+  gap: 16px;
+}
+
+.panel-header {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.two-col {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.profile-card,
+button {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.profile-card {
+  text-align: left;
+  display: grid;
+  gap: 6px;
+}
+
+button {
+  background: linear-gradient(135deg, var(--accent), #0f9a80);
+  color: white;
+  border: none;
+  font-weight: 700;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+}
+
+input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fffdf8;
+}
+
+.output {
+  background: #201c18;
+  color: #d9f7f0;
+  border-radius: 14px;
+  padding: 14px;
+  min-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.output.large {
+  min-height: 320px;
+}
+
+@media (max-width: 800px) {
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+}

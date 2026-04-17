@@ -1,0 +1,23 @@
+[
+  {
+    "anchorId": "1c5253f7-c991-47ef-b911-afb1ab04b961",
+    "anchoredAt": "2026-04-17T19:55:52.601Z",
+    "mode": "blockchain_final_step_simulation",
+    "network": "mock-ledger",
+    "transactionRef": "mock-tx-10a1df98e5daca01",
+    "reportId": "8ca811d6-d9c2-4141-bbdf-c52b52c412e0",
+    "abhaId": "SAKSHAM@ABDM",
+    "storedHash": "e24d161b87ce787ac556e2f3d342aa887532e26cd76b5f3706805c935a90482a",
+    "verificationStatus": "authentic",
+    "payloadDigest": "10a1df98e5daca01e95d82b61c90f692ec81d7b4ffd54819105a11f877b021fc",
+    "summary": {
+      "reportId": "8ca811d6-d9c2-4141-bbdf-c52b52c412e0",
+      "abhaId": "SAKSHAM@ABDM",
+      "storedHash": "e24d161b87ce787ac556e2f3d342aa887532e26cd76b5f3706805c935a90482a",
+      "verificationStatus": "authentic",
+      "predictionScore": 100,
+      "riskLevel": "low",
+      "patientName": "Saksham Mangla"
+    }
+  }
+]

@@ -1,0 +1,33 @@
+[
+  {
+    "syncId": "3e72ce98-2526-47b4-afd7-77f4b6473336",
+    "abhaId": "SAKSHAM@ABDM",
+    "source": "simulated_wearable_api",
+    "syncedAt": "2026-04-17T19:55:52.586Z",
+    "resting_heart_rate": 90,
+    "spo2": 96,
+    "glucose": 90,
+    "sleep_hours": 6.8,
+    "workout_minutes": 60,
+    "steps": 10941,
+    "heart_rate_variability": 43,
+    "calories_burned": 2793
+  },
+  {
+    "abha_id": "SAKSHAM@ABDM",
+    "heart_rate": 82,
+    "steps": 5400,
+    "sleep_hours": 6.4,
+    "glucose": 95,
+    "received_at": "2026-04-17T19:59:04.079Z",
+    "source": "health_connect_bridge",
+    "normalized_signals": {
+      "heart_rate": "NORMAL",
+      "sleep_hours": "OK",
+      "steps": "MODERATE",
+      "glucose": "SAFE"
+    },
+    "risk_score": 0,
+    "risk_level": "LOW"
+  }
+]

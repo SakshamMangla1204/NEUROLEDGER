@@ -161,15 +161,9 @@ async function ingestWearableMetrics(req, res) {
     glucose,
   } = req.body;
 
-  if (
-    !abhaId ||
-    heartRate === undefined ||
-    steps === undefined ||
-    sleepHours === undefined ||
-    glucose === undefined
-  ) {
+  if (!abhaId || heartRate === undefined || steps === undefined || sleepHours === undefined) {
     return res.status(400).json({
-      error: "abha_id, heart_rate, steps, sleep_hours, and glucose are required",
+      error: "abha_id, heart_rate, steps, and sleep_hours are required",
     });
   }
 

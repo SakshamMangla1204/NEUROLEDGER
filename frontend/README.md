@@ -1,14 +1,22 @@
-The current frontend is a lightweight static prototype served by the backend from `frontend/public/`.
+The frontend is now a React multi-page application built with Vite.
 
-Open it at:
+Run locally:
 
-`http://127.0.0.1:5000/app/index.html`
+1. `cd frontend`
+2. `npm install`
+3. `npm run dev`
 
-It currently supports:
+Build for backend serving:
 
-- simulated ABHA-compatible identity registration
-- wearable-data sync through a simulated API
-- ML health analysis
-- medical report upload
-- SHA-256 integrity verification through backend endpoints
-- blockchain-final-step simulation for the latest authentic report
+1. `cd frontend`
+2. `npm run build`
+3. start the backend
+4. open `http://127.0.0.1:5000`
+
+Pages included:
+
+- `Dashboard`
+- `Identity`
+- `Wearables`
+- `Reports`
+- `Verification`

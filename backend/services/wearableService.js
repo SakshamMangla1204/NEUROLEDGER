@@ -71,6 +71,9 @@ function normalizeSteps(steps) {
 }
 
 function normalizeGlucose(glucose) {
+  if (glucose === null || glucose === undefined || Number.isNaN(Number(glucose))) {
+    return "UNAVAILABLE";
+  }
   if (glucose > THRESHOLDS.glucose.risk) {
     return "RISK";
   }
@@ -122,12 +125,16 @@ function calculateRisk(normalizedSignals) {
 
 function ingestHealthMetrics(payload) {
   const normalized = normalizeAbhaId(payload.abha_id);
+  const glucoseValue =
+    payload.glucose === null || payload.glucose === undefined || payload.glucose === ""
+      ? null
+      : Number(payload.glucose);
   const snapshot = {
     abha_id: normalized,
     heart_rate: Number(payload.heart_rate),
     steps: Number(payload.steps),
     sleep_hours: Number(payload.sleep_hours),
-    glucose: Number(payload.glucose),
+    glucose: glucoseValue,
     received_at: new Date().toISOString(),
     source: payload.source || "health_connect_bridge",
   };

@@ -1,5 +1,10 @@
 const crypto = require("crypto");
 
+const { CONTRACT_ADDRESS } = require("../blockchain/config");
+const {
+  storeHashOnBlockchain,
+  verifyHashOnBlockchain,
+} = require("../blockchain/neuroledgerService");
 const {
   STORE_FILES,
   readJson,
@@ -19,7 +24,7 @@ function latestAnchorForReport(reportId) {
   return matches.length ? matches[matches.length - 1] : null;
 }
 
-function finalizeBlockchainAnchor({ report, verification, prediction, identity }) {
+async function finalizeBlockchainAnchor({ report, verification, prediction, identity }) {
   const payload = {
     reportId: report.reportId,
     abhaId: report.abhaId,
@@ -35,12 +40,16 @@ function finalizeBlockchainAnchor({ report, verification, prediction, identity }
     .update(JSON.stringify(payload))
     .digest("hex");
 
+  const blockchainReceipt = await storeHashOnBlockchain(report.sha256);
   const anchor = {
     anchorId: crypto.randomUUID(),
     anchoredAt: new Date().toISOString(),
-    mode: "blockchain_final_step_simulation",
-    network: "mock-ledger",
-    transactionRef: `mock-tx-${payloadDigest.slice(0, 16)}`,
+    mode: "smart_contract_anchor",
+    network: "polygon-amoy",
+    contractAddress: blockchainReceipt.contractAddress || CONTRACT_ADDRESS,
+    transactionRef: blockchainReceipt.transactionHash,
+    transactionHash: blockchainReceipt.transactionHash,
+    blockNumber: blockchainReceipt.blockNumber,
     reportId: report.reportId,
     abhaId: report.abhaId,
     storedHash: report.sha256,
@@ -58,4 +67,5 @@ function finalizeBlockchainAnchor({ report, verification, prediction, identity }
 module.exports = {
   finalizeBlockchainAnchor,
   latestAnchorForReport,
+  verifyHashOnBlockchain,
 };

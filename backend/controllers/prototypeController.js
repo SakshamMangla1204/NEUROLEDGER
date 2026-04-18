@@ -30,6 +30,7 @@ const {
 const {
   finalizeBlockchainAnchor,
   latestAnchorForReport,
+  verifyHashOnBlockchain,
 } = require("../services/blockchainService");
 
 function listPredictions() {
@@ -68,7 +69,9 @@ function buildDashboard(abhaId, verification) {
         (report) => report.blockchainStatus === "pending_external_sync"
       ).length,
       anchoredReports: reports.filter(
-        (report) => report.blockchainStatus === "anchored_to_mock_chain"
+        (report) =>
+          report.blockchainStatus === "anchored_to_mock_chain" ||
+          report.blockchainStatus === "anchored_to_polygon_amoy"
       ).length,
     },
   };
@@ -322,12 +325,28 @@ async function getReportFile(req, res) {
 }
 
 async function verifyReport(req, res) {
-  const result = verifyReportIntegrity(req.params.reportId);
-  if (!result) {
+  const report = getReportById(req.params.reportId);
+  if (!report) {
     return res.status(404).json({ error: "Report not found" });
   }
 
-  return res.status(200).json(result);
+  try {
+    const localVerification = verifyReportIntegrity(req.params.reportId);
+    const hashToVerify = req.query.hash || report.sha256;
+    const anchoredOnBlockchain = await verifyHashOnBlockchain(hashToVerify);
+    const authentic =
+      localVerification.status === "authentic" && Boolean(anchoredOnBlockchain);
+
+    return res.status(200).json({
+      ...localVerification,
+      hashChecked: hashToVerify,
+      anchoredOnBlockchain,
+      authentic,
+      status: authentic ? "authentic" : "tampered",
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 }
 
 async function finalizeReportOnBlockchain(req, res) {
@@ -347,24 +366,31 @@ async function finalizeReportOnBlockchain(req, res) {
     });
   }
 
-  const anchor = finalizeBlockchainAnchor({
-    report,
-    verification,
-    prediction,
-    identity,
-  });
+  try {
+    const anchor = await finalizeBlockchainAnchor({
+      report,
+      verification,
+      prediction,
+      identity,
+    });
 
-  const updatedReport = updateReport(report.reportId, (current) => ({
-    ...current,
-    blockchainStatus: "anchored_to_mock_chain",
-    blockchainAnchorId: anchor.anchorId,
-    finalizedAt: anchor.anchoredAt,
-  }));
+    const updatedReport = updateReport(report.reportId, (current) => ({
+      ...current,
+      blockchainStatus: "anchored_to_polygon_amoy",
+      blockchainAnchorId: anchor.anchorId,
+      blockchainTransactionHash: anchor.transactionHash,
+      finalizedAt: anchor.anchoredAt,
+    }));
 
-  return res.status(200).json({
-    anchor,
-    report: updatedReport,
-  });
+    return res.status(200).json({
+      success: true,
+      transaction: anchor.transactionHash,
+      anchor,
+      report: updatedReport,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 }
 
 function calculateAge(dob) {

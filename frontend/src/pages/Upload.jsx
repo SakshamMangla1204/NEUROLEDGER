@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { uploadReport } from "../api/api";
+import { uploadReport, verifyReport } from "../api/api";
 
 export default function Upload() {
   const [abhaId, setAbhaId] = useState("SAKSHAM@ABDM");
@@ -8,6 +8,7 @@ export default function Upload() {
   const [mimeType, setMimeType] = useState("text/plain");
   const [contentBase64, setContentBase64] = useState("");
   const [result, setResult] = useState(null);
+  const [verificationResult, setVerificationResult] = useState(null);
   const [error, setError] = useState("");
 
   async function onSubmit(event) {
@@ -22,9 +23,25 @@ export default function Upload() {
         contentBase64
       });
       setResult(data);
+      setVerificationResult(null);
     } catch (err) {
       setError(err.message);
       setResult(null);
+    }
+  }
+
+  async function verifyUploadedReport() {
+    try {
+      setError("");
+      const reportId = result?.report?.reportId;
+      if (!reportId) {
+        throw new Error("Upload a report first.");
+      }
+      const data = await verifyReport(reportId);
+      setVerificationResult(data);
+    } catch (err) {
+      setError(err.message);
+      setVerificationResult(null);
     }
   }
 
@@ -103,9 +120,15 @@ export default function Upload() {
           <button className="primary-button" type="submit">
             Store Report + Hash
           </button>
+          <button className="secondary-button" type="button" onClick={verifyUploadedReport}>
+            Verify Latest Upload
+          </button>
         </div>
 
         {result ? <div className="code-box">{JSON.stringify(result, null, 2)}</div> : null}
+        {verificationResult ? (
+          <div className="code-box">{JSON.stringify(verificationResult, null, 2)}</div>
+        ) : null}
         {error ? <div className="empty-state">{error}</div> : null}
       </form>
     </div>

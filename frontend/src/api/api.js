@@ -68,6 +68,10 @@ export async function finalizeBlockchain(reportId) {
   });
 }
 
+export async function verifyReport(reportId) {
+  return request(`/api/reports/${encodeURIComponent(reportId)}/verify`);
+}
+
 export async function postHealthMetrics(payload) {
   return request("/api/health-metrics", {
     method: "POST",

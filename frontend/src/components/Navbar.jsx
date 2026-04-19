@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import NeuroLedgerLogo from "./NeuroLedgerLogo";
 
 const sections = [
   {
@@ -22,12 +23,18 @@ function statusTone(value, positiveValue = "connected") {
     : "status-neutral";
 }
 
-export default function Navbar({ currentAbhaId, systemStatus }) {
+export default function Navbar({ currentAbhaId, operator, systemStatus, onLogout }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-head">
-        <span className="brand-title">NeuroLedger</span>
-        <span className="brand-copy">Minimal frontend for backend operations</span>
+        <NeuroLedgerLogo compact />
+        <span className="brand-copy">Clinical trust workspace</span>
+      </div>
+
+      <div className="operator-card">
+        <span className="patient-chip-label">Signed in as</span>
+        <strong>{operator?.operatorName || "Operator"}</strong>
+        <span className="operator-meta">{operator?.operatorEmail || "operator@neuroledger.health"}</span>
       </div>
 
       <div className="patient-chip">
@@ -69,6 +76,9 @@ export default function Navbar({ currentAbhaId, systemStatus }) {
           <span>Storage</span>
           <strong>{systemStatus?.storage || "pending"}</strong>
         </div>
+        <button className="secondary-button sidebar-logout" type="button" onClick={onLogout}>
+          Sign out
+        </button>
       </div>
     </aside>
   );

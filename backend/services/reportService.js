@@ -1,23 +1,17 @@
 const crypto = require("crypto");
-const fs = require("fs");
-const path = require("path");
 
 const {
-  REPORTS_DIR,
   STORE_FILES,
   ensureStore,
   readJson,
   writeJson,
 } = require("./localStoreService");
+const { persistReportBinary, readReportBuffer } = require("./storageService");
 
 function decodeBase64Payload(contentBase64) {
   const raw = String(contentBase64 || "");
   const encoded = raw.includes(",") ? raw.split(",").pop() : raw;
   return Buffer.from(encoded, "base64");
-}
-
-function sanitizeFilename(fileName) {
-  return String(fileName || "report.bin").replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 function sha256(buffer) {
@@ -53,7 +47,7 @@ function updateReport(reportId, updater) {
   return updatedRecord;
 }
 
-function saveReport({ abhaId, fileName, mimeType, contentBase64, notes }) {
+async function saveReport({ abhaId, fileName, mimeType, contentBase64, notes }) {
   ensureStore();
 
   const buffer = decodeBase64Payload(contentBase64);
@@ -62,24 +56,30 @@ function saveReport({ abhaId, fileName, mimeType, contentBase64, notes }) {
   }
 
   const reportId = crypto.randomUUID();
-  const safeName = sanitizeFilename(fileName);
-  const storedFileName = `${reportId}-${safeName}`;
-  const filePath = path.join(REPORTS_DIR, storedFileName);
+  const storageRecord = await persistReportBinary({
+    buffer,
+    reportId,
+    fileName,
+    mimeType,
+  });
   const digest = sha256(buffer);
-
-  fs.writeFileSync(filePath, buffer);
 
   const reportRecord = {
     reportId,
     abhaId,
-    originalFileName: safeName,
+    originalFileName: storageRecord.originalFileName,
     mimeType: mimeType || "application/octet-stream",
     sizeBytes: buffer.length,
     uploadedAt: new Date().toISOString(),
     notes: notes || "",
-    storedFileName,
-    filePath,
+    storedFileName: storageRecord.storedFileName,
+    filePath: storageRecord.filePath,
     fileUrl: `/api/reports/${reportId}/file`,
+    storageMode: storageRecord.storageMode,
+    storageKey: storageRecord.storageKey,
+    s3Key: storageRecord.s3Key,
+    s3Bucket: storageRecord.s3Bucket,
+    sourceUrl: storageRecord.fileUrl,
     sha256: digest,
     integrityStatus: "hash_recorded_locally",
     blockchainStatus: "pending_external_sync",
@@ -100,13 +100,13 @@ function listReportsByAbhaId(abhaId) {
   return listAllReports().filter((report) => report.abhaId === abhaId);
 }
 
-function verifyReportIntegrity(reportId) {
+async function verifyReportIntegrity(reportId) {
   const report = getReportById(reportId);
   if (!report) {
     return null;
   }
 
-  const buffer = fs.readFileSync(report.filePath);
+  const buffer = await readReportBuffer(report);
   const recomputedHash = sha256(buffer);
   const isAuthentic = recomputedHash === report.sha256;
 

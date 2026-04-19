@@ -15,6 +15,7 @@ const {
   uploadReport,
   verifyAbha,
   verifyReport,
+  verifyReportHash,
 } = require("../controllers/prototypeController");
 
 const router = express.Router();
@@ -30,6 +31,7 @@ router.post("/patients/:abhaId/analyze", analyzePatient);
 router.get("/patients/:abhaId/dashboard", getDashboard);
 router.get("/reports", listReports);
 router.post("/reports/upload", uploadReport);
+router.post("/reports/verify", verifyReportHash);
 router.get("/reports/:reportId/file", getReportFile);
 router.get("/reports/:reportId/verify", verifyReport);
 router.post("/reports/:reportId/finalize-blockchain", finalizeReportOnBlockchain);

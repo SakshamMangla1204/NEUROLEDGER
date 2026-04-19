@@ -1,14 +1,15 @@
-const { ethers } = require("ethers");
+const { getContract } = require("./contract");
+const { BLOCKCHAIN_ENABLED, CONTRACT_ADDRESS, NETWORK_NAME } = require("./config");
+const web3 = require("./web3");
 
-const { provider, getWallet, CONTRACT_ADDRESS } = require("./config");
-const { ABI } = require("./abi");
+function ensureBlockchainReady() {
+  if (!BLOCKCHAIN_ENABLED) {
+    throw new Error("Blockchain integration is disabled");
+  }
 
-function getReadContract() {
-  return new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-}
-
-function getWriteContract() {
-  return new ethers.Contract(CONTRACT_ADDRESS, ABI, getWallet());
+  if (!CONTRACT_ADDRESS) {
+    throw new Error("BLOCKCHAIN_CONTRACT_ADDRESS is not configured in backend/.env");
+  }
 }
 
 async function storeHashOnBlockchain(hash) {
@@ -16,14 +17,16 @@ async function storeHashOnBlockchain(hash) {
     throw new Error("A report hash is required for blockchain finalization");
   }
 
-  const contract = getWriteContract();
-  const tx = await contract.storeReportHash(hash);
-  const receipt = await tx.wait();
+  ensureBlockchainReady();
+  const accounts = await web3.eth.getAccounts();
+  const contract = getContract();
+  const receipt = await contract.methods.storeReportHash(hash).send({ from: accounts[0] });
 
   return {
-    transactionHash: tx.hash,
+    transactionHash: receipt.transactionHash,
     blockNumber: receipt?.blockNumber ?? null,
     contractAddress: CONTRACT_ADDRESS,
+    networkName: NETWORK_NAME,
   };
 }
 
@@ -32,8 +35,9 @@ async function verifyHashOnBlockchain(hash) {
     throw new Error("A report hash is required for blockchain verification");
   }
 
-  const contract = getReadContract();
-  return contract.verifyReportHash(hash);
+  ensureBlockchainReady();
+  const contract = getContract();
+  return contract.methods.verifyReportHash(hash).call();
 }
 
 module.exports = {

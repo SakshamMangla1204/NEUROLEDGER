@@ -32,6 +32,7 @@ const {
   latestAnchorForReport,
   verifyHashOnBlockchain,
 } = require("../services/blockchainService");
+const { getReportAccessDescriptor } = require("../services/storageService");
 
 function listPredictions() {
   return readJson(STORE_FILES.predictions, []);
@@ -71,7 +72,7 @@ function buildDashboard(abhaId, verification) {
       anchoredReports: reports.filter(
         (report) =>
           report.blockchainStatus === "anchored_to_mock_chain" ||
-          report.blockchainStatus === "anchored_to_polygon_amoy"
+          report.blockchainStatus === "anchored_onchain"
       ).length,
     },
   };
@@ -268,7 +269,7 @@ async function uploadReport(req, res) {
   }
 
   try {
-    const report = saveReport({
+    const report = await saveReport({
       abhaId,
       fileName: req.body.fileName,
       mimeType: req.body.mimeType,
@@ -277,9 +278,49 @@ async function uploadReport(req, res) {
     });
     linkReportToIdentity(abhaId, report.reportId);
 
+    let anchoredReport = report;
+    let anchor = null;
+    let blockchainSync = {
+      success: false,
+      mode: "deferred",
+    };
+
+    try {
+      const anchored = await finalizeBlockchainAnchor({
+        report,
+        verification: {
+          status: "authentic",
+        },
+        prediction: latestPredictionFor(abhaId)?.prediction || null,
+        identity: verification.patient,
+      });
+
+      anchor = anchored;
+      anchoredReport = updateReport(report.reportId, (current) => ({
+        ...current,
+        blockchainStatus: "anchored_onchain",
+        blockchainAnchorId: anchored.anchorId,
+        blockchainTransactionHash: anchored.transactionHash,
+        finalizedAt: anchored.anchoredAt,
+      }));
+      blockchainSync = {
+        success: true,
+        mode: "anchored_on_upload",
+        transactionHash: anchored.transactionHash,
+      };
+    } catch (blockchainError) {
+      blockchainSync = {
+        success: false,
+        mode: "deferred",
+        error: blockchainError.message,
+      };
+    }
+
     return res.status(201).json({
       verification,
-      report,
+      report: anchoredReport,
+      blockchainAnchor: anchor,
+      blockchainSync,
       dashboard: buildDashboard(abhaId, verification),
     });
   } catch (error) {
@@ -321,7 +362,19 @@ async function getReportFile(req, res) {
     return res.status(404).json({ error: "Report not found" });
   }
 
-  return res.sendFile(report.filePath);
+  try {
+    const descriptor = await getReportAccessDescriptor(report);
+    if (descriptor.type === "redirect") {
+      return res.redirect(descriptor.target);
+    }
+
+    return res.sendFile(descriptor.target);
+  } catch (error) {
+    return res.status(500).json({
+      error: "Unable to retrieve report file",
+      detail: error.message,
+    });
+  }
 }
 
 async function verifyReport(req, res) {
@@ -331,7 +384,7 @@ async function verifyReport(req, res) {
   }
 
   try {
-    const localVerification = verifyReportIntegrity(req.params.reportId);
+    const localVerification = await verifyReportIntegrity(req.params.reportId);
     const hashToVerify = req.query.hash || report.sha256;
     const anchoredOnBlockchain = await verifyHashOnBlockchain(hashToVerify);
     const authentic =
@@ -349,13 +402,30 @@ async function verifyReport(req, res) {
   }
 }
 
+async function verifyReportHash(req, res) {
+  const hash = req.body.hash;
+
+  if (!hash) {
+    return res.status(400).json({
+      error: "hash is required",
+    });
+  }
+
+  try {
+    const verified = await verifyHashOnBlockchain(hash);
+    return res.status(200).json({ verified, hash });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
+
 async function finalizeReportOnBlockchain(req, res) {
   const report = getReportById(req.params.reportId);
   if (!report) {
     return res.status(404).json({ error: "Report not found" });
   }
 
-  const verification = verifyReportIntegrity(report.reportId);
+  const verification = await verifyReportIntegrity(report.reportId);
   const identity = findIdentityByAbhaId(report.abhaId);
   const prediction = latestPredictionFor(report.abhaId)?.prediction || null;
 
@@ -376,7 +446,7 @@ async function finalizeReportOnBlockchain(req, res) {
 
     const updatedReport = updateReport(report.reportId, (current) => ({
       ...current,
-      blockchainStatus: "anchored_to_polygon_amoy",
+      blockchainStatus: "anchored_onchain",
       blockchainAnchorId: anchor.anchorId,
       blockchainTransactionHash: anchor.transactionHash,
       finalizedAt: anchor.anchoredAt,
@@ -433,4 +503,5 @@ module.exports = {
   uploadReport,
   verifyAbha,
   verifyReport,
+  verifyReportHash,
 };

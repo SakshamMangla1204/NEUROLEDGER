@@ -5,11 +5,16 @@
   "description": "Blockchain module for NeuroLedger",
   "type": "commonjs",
   "scripts": {
-    "compile": "hardhat compile",
-    "test": "hardhat test",
-    "deploy": "hardhat run scripts/deploy.js"
+    "compile": "truffle compile",
+    "migrate": "truffle migrate",
+    "migrate:reset": "truffle migrate --reset",
+    "test": "truffle test",
+    "deploy": "truffle migrate --network development"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
   },
   "devDependencies": {
-    "hardhat": "^2.22.0"
+    "truffle": "^5.11.5"
   }
 }

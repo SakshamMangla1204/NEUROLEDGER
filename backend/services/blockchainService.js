@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const { CONTRACT_ADDRESS } = require("../blockchain/config");
+const { CONTRACT_ADDRESS, NETWORK_NAME } = require("../blockchain/config");
 const {
   storeHashOnBlockchain,
   verifyHashOnBlockchain,
@@ -45,7 +45,7 @@ async function finalizeBlockchainAnchor({ report, verification, prediction, iden
     anchorId: crypto.randomUUID(),
     anchoredAt: new Date().toISOString(),
     mode: "smart_contract_anchor",
-    network: "polygon-amoy",
+    network: blockchainReceipt.networkName || NETWORK_NAME,
     contractAddress: blockchainReceipt.contractAddress || CONTRACT_ADDRESS,
     transactionRef: blockchainReceipt.transactionHash,
     transactionHash: blockchainReceipt.transactionHash,

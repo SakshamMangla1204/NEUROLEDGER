@@ -19,6 +19,7 @@ const {
   getReportById,
   listReportsByAbhaId,
   saveReport,
+  saveReportHashOnly,
   updateReport,
   verifyReportIntegrity,
 } = require("../services/reportService");
@@ -42,6 +43,20 @@ function writePredictions(records) {
   writeJson(STORE_FILES.predictions, records);
 }
 
+function resolveUploadAbhaId(candidateAbhaId) {
+  const normalized = normalizeAbhaId(candidateAbhaId);
+  if (normalized) {
+    return normalized;
+  }
+
+  const profiles = listDemoProfiles();
+  if (profiles.length === 1) {
+    return normalizeAbhaId(profiles[0].abhaId);
+  }
+
+  return normalized;
+}
+
 function latestPredictionFor(abhaId) {
   const matches = listPredictions().filter((record) => record.abhaId === abhaId);
   return matches.length ? matches[matches.length - 1] : null;
@@ -56,24 +71,39 @@ function buildDashboard(abhaId, verification) {
     ...report,
     blockchainAnchor: latestAnchorForReport(report.reportId),
   }));
+  const anchoredReports = enrichedReports.filter(
+    (report) => report.blockchainStatus === "anchored_to_mock_chain" || report.blockchainStatus === "anchored_onchain"
+  );
 
   return {
     verification,
     identity,
     wearable,
+    wearables: wearable ? [wearable] : [],
     latestPrediction,
+    mlRiskScore: latestPrediction?.prediction?.overall_score ?? wearable?.risk_score ?? null,
+    blockchain: {
+      anchored: anchoredReports.length > 0,
+      verified: anchoredReports.length > 0,
+    },
+    blockchainVerificationStatus: {
+      anchoredReports: anchoredReports.length,
+      pendingReports: enrichedReports.filter(
+        (report) => report.blockchainStatus === "pending_external_sync"
+      ).length,
+      latestTransactionHash:
+        anchoredReports.length > 0
+          ? anchoredReports[anchoredReports.length - 1].blockchainTransactionHash || null
+          : null,
+    },
     reports: enrichedReports,
     reportSummary: {
       totalReports: reports.length,
       authenticReports: reports.filter((report) => report.integrityStatus !== "tampered").length,
-      pendingBlockchainSync: reports.filter(
+      pendingBlockchainSync: enrichedReports.filter(
         (report) => report.blockchainStatus === "pending_external_sync"
       ).length,
-      anchoredReports: reports.filter(
-        (report) =>
-          report.blockchainStatus === "anchored_to_mock_chain" ||
-          report.blockchainStatus === "anchored_onchain"
-      ).length,
+      anchoredReports: anchoredReports.length,
     },
   };
 }
@@ -261,7 +291,8 @@ async function getHealthSummary(req, res) {
 }
 
 async function uploadReport(req, res) {
-  const abhaId = normalizeAbhaId(req.body.abhaId);
+  const abhaId = resolveUploadAbhaId(req.body.abhaId);
+  const isHashOnlyUpload = Boolean(req.body.sha256);
   const verification = verifyAbhaId(abhaId);
 
   if (!verification.verified) {
@@ -269,13 +300,20 @@ async function uploadReport(req, res) {
   }
 
   try {
-    const report = await saveReport({
-      abhaId,
-      fileName: req.body.fileName,
-      mimeType: req.body.mimeType,
-      contentBase64: req.body.contentBase64,
-      notes: req.body.notes,
-    });
+    const report = req.body.sha256
+      ? saveReportHashOnly({
+          abhaId,
+          fileName: req.body.fileName,
+          sha256: req.body.sha256,
+          notes: req.body.notes,
+        })
+      : await saveReport({
+          abhaId,
+          fileName: req.body.fileName,
+          mimeType: req.body.mimeType,
+          contentBase64: req.body.contentBase64,
+          notes: req.body.notes,
+        });
     linkReportToIdentity(abhaId, report.reportId);
 
     let anchoredReport = report;
@@ -285,38 +323,41 @@ async function uploadReport(req, res) {
       mode: "deferred",
     };
 
-    try {
-      const anchored = await finalizeBlockchainAnchor({
-        report,
-        verification: {
-          status: "authentic",
-        },
-        prediction: latestPredictionFor(abhaId)?.prediction || null,
-        identity: verification.patient,
-      });
+    if (!isHashOnlyUpload) {
+      try {
+        const anchored = await finalizeBlockchainAnchor({
+          report,
+          verification: {
+            status: "authentic",
+          },
+          prediction: latestPredictionFor(abhaId)?.prediction || null,
+          identity: verification.patient,
+        });
 
-      anchor = anchored;
-      anchoredReport = updateReport(report.reportId, (current) => ({
-        ...current,
-        blockchainStatus: "anchored_onchain",
-        blockchainAnchorId: anchored.anchorId,
-        blockchainTransactionHash: anchored.transactionHash,
-        finalizedAt: anchored.anchoredAt,
-      }));
-      blockchainSync = {
-        success: true,
-        mode: "anchored_on_upload",
-        transactionHash: anchored.transactionHash,
-      };
-    } catch (blockchainError) {
-      blockchainSync = {
-        success: false,
-        mode: "deferred",
-        error: blockchainError.message,
-      };
+        anchor = anchored;
+        anchoredReport = updateReport(report.reportId, (current) => ({
+          ...current,
+          blockchainStatus: "anchored_onchain",
+          blockchainAnchorId: anchored.anchorId,
+          blockchainTransactionHash: anchored.transactionHash,
+          finalizedAt: anchored.anchoredAt,
+        }));
+        blockchainSync = {
+          success: true,
+          mode: "anchored_on_upload",
+          transactionHash: anchored.transactionHash,
+        };
+      } catch (blockchainError) {
+        blockchainSync = {
+          success: false,
+          mode: "deferred",
+          error: blockchainError.message,
+        };
+      }
     }
 
     return res.status(201).json({
+      reportId: anchoredReport.reportId,
       verification,
       report: anchoredReport,
       blockchainAnchor: anchor,
@@ -454,6 +495,8 @@ async function finalizeReportOnBlockchain(req, res) {
 
     return res.status(200).json({
       success: true,
+      status: "anchored",
+      txHash: anchor.transactionHash,
       transaction: anchor.transactionHash,
       anchor,
       report: updatedReport,

@@ -5,6 +5,10 @@ const { REPORTS_DIR } = require("./localStoreService");
 
 const STORAGE_MODE = (process.env.REPORT_STORAGE_MODE || "local").toLowerCase();
 
+function getS3BucketName() {
+  return process.env.AWS_S3_BUCKET || process.env.AWS_BUCKET_NAME || "";
+}
+
 function sanitizeFilename(fileName) {
   return String(fileName || "report.bin").replace(/[^a-zA-Z0-9._-]/g, "_");
 }
@@ -29,13 +33,15 @@ function writeLocalReport({ buffer, storedFileName }) {
 }
 
 async function writeS3Report({ buffer, storedFileName, mimeType }) {
-  const bucket = process.env.AWS_S3_BUCKET;
+  const bucket = getS3BucketName();
   const region = process.env.AWS_REGION;
   const prefix = process.env.AWS_S3_PREFIX || "reports/";
   const publicBaseUrl = process.env.AWS_S3_PUBLIC_BASE_URL;
 
   if (!bucket || !region) {
-    throw new Error("AWS_S3_BUCKET and AWS_REGION are required for REPORT_STORAGE_MODE=s3");
+    throw new Error(
+      "AWS_REGION and either AWS_S3_BUCKET or AWS_BUCKET_NAME are required for REPORT_STORAGE_MODE=s3"
+    );
   }
 
   let s3ClientModule;
@@ -99,7 +105,7 @@ async function readS3ReportBuffer(report) {
   const client = new S3Client({ region: process.env.AWS_REGION });
   const response = await client.send(
     new GetObjectCommand({
-      Bucket: report.s3Bucket || process.env.AWS_S3_BUCKET,
+      Bucket: report.s3Bucket || getS3BucketName(),
       Key: report.s3Key,
     })
   );
@@ -143,7 +149,7 @@ async function getReportAccessDescriptor(report) {
     const target = await getSignedUrl(
       client,
       new GetObjectCommand({
-        Bucket: report.s3Bucket || process.env.AWS_S3_BUCKET,
+        Bucket: report.s3Bucket || getS3BucketName(),
         Key: report.s3Key,
       }),
       { expiresIn: 900 }

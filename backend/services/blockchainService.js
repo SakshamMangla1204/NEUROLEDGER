@@ -40,16 +40,28 @@ async function finalizeBlockchainAnchor({ report, verification, prediction, iden
     .update(JSON.stringify(payload))
     .digest("hex");
 
-  const blockchainReceipt = await storeHashOnBlockchain(report.sha256);
+  const alreadyAnchored = await verifyHashOnBlockchain(report.sha256);
+  const blockchainReceipt = alreadyAnchored
+    ? {
+        transactionHash: null,
+        blockNumber: null,
+        contractAddress: CONTRACT_ADDRESS,
+        networkName: NETWORK_NAME,
+        alreadyAnchored: true,
+      }
+    : await storeHashOnBlockchain(report.sha256);
   const anchor = {
     anchorId: crypto.randomUUID(),
     anchoredAt: new Date().toISOString(),
-    mode: "smart_contract_anchor",
+    mode: blockchainReceipt.alreadyAnchored
+      ? "smart_contract_anchor_existing"
+      : "smart_contract_anchor",
     network: blockchainReceipt.networkName || NETWORK_NAME,
     contractAddress: blockchainReceipt.contractAddress || CONTRACT_ADDRESS,
     transactionRef: blockchainReceipt.transactionHash,
     transactionHash: blockchainReceipt.transactionHash,
     blockNumber: blockchainReceipt.blockNumber,
+    alreadyAnchored: Boolean(blockchainReceipt.alreadyAnchored),
     reportId: report.reportId,
     abhaId: report.abhaId,
     storedHash: report.sha256,

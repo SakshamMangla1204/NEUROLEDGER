@@ -26,6 +26,13 @@ function writeReports(records) {
   writeJson(STORE_FILES.reports, records);
 }
 
+function persistReportRecord(reportRecord) {
+  const reports = listAllReports();
+  reports.push(reportRecord);
+  writeReports(reports);
+  return reportRecord;
+}
+
 function updateReport(reportId, updater) {
   const reports = listAllReports();
   let updatedRecord = null;
@@ -85,11 +92,38 @@ async function saveReport({ abhaId, fileName, mimeType, contentBase64, notes }) 
     blockchainStatus: "pending_external_sync",
   };
 
-  const reports = listAllReports();
-  reports.push(reportRecord);
-  writeReports(reports);
+  return persistReportRecord(reportRecord);
+}
 
-  return reportRecord;
+function saveReportHashOnly({ abhaId, fileName, sha256: providedHash, notes }) {
+  ensureStore();
+
+  const digest = String(providedHash || "").trim();
+  if (!digest) {
+    throw new Error("sha256 is required when uploading a hash-only report.");
+  }
+
+  const reportId = crypto.randomUUID();
+  return persistReportRecord({
+    reportId,
+    abhaId,
+    originalFileName: fileName || "report.hash",
+    mimeType: "text/plain",
+    sizeBytes: 0,
+    uploadedAt: new Date().toISOString(),
+    notes: notes || "",
+    storedFileName: null,
+    filePath: null,
+    fileUrl: null,
+    storageMode: "hash_only",
+    storageKey: null,
+    s3Key: null,
+    s3Bucket: null,
+    sourceUrl: null,
+    sha256: digest,
+    integrityStatus: "hash_supplied_locally",
+    blockchainStatus: "pending_external_sync",
+  });
 }
 
 function getReportById(reportId) {
@@ -104,6 +138,18 @@ async function verifyReportIntegrity(reportId) {
   const report = getReportById(reportId);
   if (!report) {
     return null;
+  }
+
+  if (report.storageMode === "hash_only") {
+    return {
+      reportId: report.reportId,
+      originalFileName: report.originalFileName,
+      storedHash: report.sha256,
+      recomputedHash: report.sha256,
+      status: "authentic",
+      blockchainStatus: report.blockchainStatus,
+      comparedAt: new Date().toISOString(),
+    };
   }
 
   const buffer = await readReportBuffer(report);
@@ -125,6 +171,7 @@ module.exports = {
   getReportById,
   listReportsByAbhaId,
   saveReport,
+  saveReportHashOnly,
   updateReport,
   verifyReportIntegrity,
 };

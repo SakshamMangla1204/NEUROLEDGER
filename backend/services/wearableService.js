@@ -160,12 +160,20 @@ function buildHealthSummary(abhaId) {
   }
 
   return {
+    abha_id: latest.abha_id,
     latest_heart_rate: latest.heart_rate,
     sleep_hours: latest.sleep_hours,
     steps: latest.steps,
     glucose: latest.glucose,
     risk_level: latest.risk_level,
+    risk_score: latest.risk_score,
     normalized_signals: latest.normalized_signals,
+    metrics: {
+      heart_rate: latest.heart_rate,
+      sleep_hours: latest.sleep_hours,
+      steps: latest.steps,
+      glucose: latest.glucose,
+    },
     received_at: latest.received_at,
   };
 }

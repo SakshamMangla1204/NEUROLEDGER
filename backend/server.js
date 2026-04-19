@@ -7,7 +7,7 @@ const healthRoutes = require("./routes/healthRoutes");
 const prototypeRoutes = require("./routes/prototypeRoutes");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5050;
 const FRONTEND_DIR = path.resolve(__dirname, "../frontend/dist");
 
 let authRoutes = null;

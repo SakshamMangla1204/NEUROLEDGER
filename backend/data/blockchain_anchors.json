@@ -19,5 +19,80 @@
       "riskLevel": "low",
       "patientName": "Saksham Mangla"
     }
+  },
+  {
+    "anchorId": "293a6b29-3946-444f-85f2-0ee2388ab529",
+    "anchoredAt": "2026-04-19T12:49:51.342Z",
+    "mode": "smart_contract_anchor_existing",
+    "network": "ganache-local",
+    "contractAddress": "0x564540a5C22a8746D22f304064F02498BbD24Ca4",
+    "transactionRef": null,
+    "transactionHash": null,
+    "blockNumber": null,
+    "alreadyAnchored": true,
+    "reportId": "6de856aa-591d-4c0c-a161-d23217f40058",
+    "abhaId": "SAKSHAM@ABDM",
+    "storedHash": "abc123hash",
+    "verificationStatus": "authentic",
+    "payloadDigest": "c0c3e4afeb64593947565bc601ee244020aa5cf9e393b81ff0792c457b87e372",
+    "summary": {
+      "reportId": "6de856aa-591d-4c0c-a161-d23217f40058",
+      "abhaId": "SAKSHAM@ABDM",
+      "storedHash": "abc123hash",
+      "verificationStatus": "authentic",
+      "predictionScore": 100,
+      "riskLevel": "low",
+      "patientName": "Saksham Mangla"
+    }
+  },
+  {
+    "anchorId": "7677bff3-0e1a-47dd-abb8-7646e6ee7b73",
+    "anchoredAt": "2026-04-19T12:51:06.801Z",
+    "mode": "smart_contract_anchor",
+    "network": "ganache-local",
+    "contractAddress": "0x564540a5C22a8746D22f304064F02498BbD24Ca4",
+    "transactionRef": "0x53b9adb32addb555e9a9c8133e50da634bad027ad5b359f25d87900a83405dbf",
+    "transactionHash": "0x53b9adb32addb555e9a9c8133e50da634bad027ad5b359f25d87900a83405dbf",
+    "blockNumber": 8,
+    "alreadyAnchored": false,
+    "reportId": "b31de90d-59e0-458f-b243-b575a88b752b",
+    "abhaId": "SAKSHAM@ABDM",
+    "storedHash": "abc123hash-20260419-fresh-3",
+    "verificationStatus": "authentic",
+    "payloadDigest": "b7780cb59dc1162c0a4533393b6f12f2714576f539d053d9c182858938678a71",
+    "summary": {
+      "reportId": "b31de90d-59e0-458f-b243-b575a88b752b",
+      "abhaId": "SAKSHAM@ABDM",
+      "storedHash": "abc123hash-20260419-fresh-3",
+      "verificationStatus": "authentic",
+      "predictionScore": 100,
+      "riskLevel": "low",
+      "patientName": "Saksham Mangla"
+    }
+  },
+  {
+    "anchorId": "ff895446-2335-4741-8893-8a3516bbfcb5",
+    "anchoredAt": "2026-04-19T12:52:53.115Z",
+    "mode": "smart_contract_anchor",
+    "network": "ganache-local",
+    "contractAddress": "0x564540a5C22a8746D22f304064F02498BbD24Ca4",
+    "transactionRef": "0x310bca53978cd59e0aa0707082a6eb9a26f55070aeab795d9e47c96a9636882c",
+    "transactionHash": "0x310bca53978cd59e0aa0707082a6eb9a26f55070aeab795d9e47c96a9636882c",
+    "blockNumber": 9,
+    "alreadyAnchored": false,
+    "reportId": "538ba1df-11d4-40b7-bdc2-958defd6505d",
+    "abhaId": "SAKSHAM@ABDM",
+    "storedHash": "abc123hash-20260419-checklist",
+    "verificationStatus": "authentic",
+    "payloadDigest": "ac130e029d851a5d39996029b47f4f053e7d14c328812eda3055f89a38752796",
+    "summary": {
+      "reportId": "538ba1df-11d4-40b7-bdc2-958defd6505d",
+      "abhaId": "SAKSHAM@ABDM",
+      "storedHash": "abc123hash-20260419-checklist",
+      "verificationStatus": "authentic",
+      "predictionScore": 100,
+      "riskLevel": "low",
+      "patientName": "Saksham Mangla"
+    }
   }
 ]

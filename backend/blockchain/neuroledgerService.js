@@ -2,6 +2,19 @@ const { getContract } = require("./contract");
 const { BLOCKCHAIN_ENABLED, CONTRACT_ADDRESS, NETWORK_NAME } = require("./config");
 const web3 = require("./web3");
 
+function normalizeBlockNumber(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === "bigint") {
+    const asNumber = Number(value);
+    return Number.isSafeInteger(asNumber) ? asNumber : value.toString();
+  }
+
+  return value;
+}
+
 function ensureBlockchainReady() {
   if (!BLOCKCHAIN_ENABLED) {
     throw new Error("Blockchain integration is disabled");
@@ -20,11 +33,14 @@ async function storeHashOnBlockchain(hash) {
   ensureBlockchainReady();
   const accounts = await web3.eth.getAccounts();
   const contract = getContract();
-  const receipt = await contract.methods.storeReportHash(hash).send({ from: accounts[0] });
+  const method = contract.methods.storeReportHash(hash);
+  const estimatedGas = await method.estimateGas({ from: accounts[0] });
+  const gas = Number(estimatedGas) + 50000;
+  const receipt = await method.send({ from: accounts[0], gas });
 
   return {
     transactionHash: receipt.transactionHash,
-    blockNumber: receipt?.blockNumber ?? null,
+    blockNumber: normalizeBlockNumber(receipt?.blockNumber),
     contractAddress: CONTRACT_ADDRESS,
     networkName: NETWORK_NAME,
   };

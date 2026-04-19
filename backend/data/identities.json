@@ -13,11 +13,14 @@
       "94b620b1-b881-4bc9-8367-30d8ea4f4002",
       "ff39e534-71da-4ea8-ac25-b25c89c9365b",
       "b31de90d-59e0-458f-b243-b575a88b752b",
-      "538ba1df-11d4-40b7-bdc2-958defd6505d"
+      "538ba1df-11d4-40b7-bdc2-958defd6505d",
+      "00981a8a-8e4c-4916-8a32-e7bb1eb2d4bc",
+      "5db0e4b9-c7a0-45e1-b9ca-d6548b5fbc83",
+      "d02f06f9-8611-45f3-bc61-98a37e5c2eff"
     ],
     "createdAt": "2026-04-17T19:52:05.758Z",
     "mode": "simulated_abha_identity",
-    "updatedAt": "2026-04-19T12:52:52.983Z",
+    "updatedAt": "2026-04-19T14:03:24.769Z",
     "metrics": [
       {
         "abha_id": "SAKSHAM@ABDM",
@@ -43,6 +46,23 @@
         "sleep_hours": 6.4,
         "glucose": 95,
         "received_at": "2026-04-19T12:52:52.931Z",
+        "source": "health_connect_bridge",
+        "normalized_signals": {
+          "heart_rate": "NORMAL",
+          "sleep_hours": "OK",
+          "steps": "MODERATE",
+          "glucose": "SAFE"
+        },
+        "risk_score": 0,
+        "risk_level": "LOW"
+      },
+      {
+        "abha_id": "SAKSHAM@ABDM",
+        "heart_rate": 82,
+        "steps": 5400,
+        "sleep_hours": 6.4,
+        "glucose": 95,
+        "received_at": "2026-04-19T13:58:41.362Z",
         "source": "health_connect_bridge",
         "normalized_signals": {
           "heart_rate": "NORMAL",

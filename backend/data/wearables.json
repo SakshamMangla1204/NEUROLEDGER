@@ -46,5 +46,22 @@
     },
     "risk_score": 0,
     "risk_level": "LOW"
+  },
+  {
+    "abha_id": "SAKSHAM@ABDM",
+    "heart_rate": 82,
+    "steps": 5400,
+    "sleep_hours": 6.4,
+    "glucose": 95,
+    "received_at": "2026-04-19T13:58:41.362Z",
+    "source": "health_connect_bridge",
+    "normalized_signals": {
+      "heart_rate": "NORMAL",
+      "sleep_hours": "OK",
+      "steps": "MODERATE",
+      "glucose": "SAFE"
+    },
+    "risk_score": 0,
+    "risk_level": "LOW"
   }
 ]

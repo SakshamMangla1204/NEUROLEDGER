@@ -1,21 +1,33 @@
-import { useState } from "react";
-import { finalizeBlockchain, getDashboard, verifyReport } from "../api/api";
+import { useEffect, useState } from "react";
+import { finalizeBlockchain, getDashboard, verifyReport, verifyReportHash } from "../api/api";
 
-export default function DoctorPanel() {
-  const [abhaId, setAbhaId] = useState("SAKSHAM@ABDM");
+function prettyStatus(value) {
+  return String(value || "pending").replace(/_/g, " ");
+}
+
+export default function DoctorPanel({ currentAbhaId, systemStatus }) {
+  const [abhaId, setAbhaId] = useState(currentAbhaId);
   const [dashboard, setDashboard] = useState(null);
   const [finalized, setFinalized] = useState(null);
   const [verificationResult, setVerificationResult] = useState(null);
+  const [hashVerification, setHashVerification] = useState(null);
   const [selectedReportId, setSelectedReportId] = useState("");
   const [error, setError] = useState("");
   const reports = dashboard?.reports || [];
+
+  useEffect(() => {
+    setAbhaId(currentAbhaId);
+  }, [currentAbhaId]);
 
   async function loadPatientDashboard() {
     try {
       setError("");
       const data = await getDashboard(abhaId);
       setDashboard(data);
-      setSelectedReportId(data?.reports?.[data.reports.length - 1]?.reportId || "");
+      const latestReport = data?.reports?.[data.reports.length - 1];
+      setSelectedReportId(latestReport?.reportId || "");
+      setHashVerification(null);
+      setVerificationResult(null);
     } catch (err) {
       setError(err.message);
       setDashboard(null);
@@ -25,7 +37,6 @@ export default function DoctorPanel() {
   async function finalizeSelectedReport() {
     try {
       setError("");
-      setVerificationResult(null);
       if (!selectedReportId) {
         throw new Error("Load a patient dashboard with at least one report first.");
       }
@@ -47,29 +58,31 @@ export default function DoctorPanel() {
       }
       const data = await verifyReport(selectedReportId);
       setVerificationResult(data);
+      const hashStatus = await verifyReportHash(data.hashChecked);
+      setHashVerification(hashStatus);
     } catch (err) {
       setError(err.message);
       setVerificationResult(null);
+      setHashVerification(null);
     }
   }
 
+  const selectedReport = reports.find((report) => report.reportId === selectedReportId);
+
   return (
     <div className="page">
-      <section className="hero-card">
-        <p className="eyebrow">Verification Center</p>
-        <h1>Review patient context, finalize authentic reports to Polygon Amoy, and verify on-chain authenticity without touching raw backend routes.</h1>
-        <p>
-          This page gives the verification workflow its own operational surface instead of sending
-          you to low-level API endpoints in the browser.
-        </p>
+      <section className="section-header">
+        <span className="section-kicker">Verification</span>
+        <h2>Verify hashes and finalize reports</h2>
+        <p>Minimal control panel for loading report records and sending blockchain actions.</p>
       </section>
 
       <section className="page-grid">
         <div className="panel col-4 stack">
           <div className="panel-header">
             <div>
-              <h2 className="panel-title">Patient Lookup</h2>
-              <p className="panel-copy">Load a dashboard snapshot using the patient ABHA ID.</p>
+              <h2 className="panel-title">Actions</h2>
+              <p className="panel-copy">Load dashboard data, verify the selected report, or finalize it on chain.</p>
             </div>
           </div>
 
@@ -84,7 +97,7 @@ export default function DoctorPanel() {
 
           <div className="action-row">
             <button className="primary-button" type="button" onClick={loadPatientDashboard}>
-              Load Dashboard
+              Load Trust View
             </button>
           </div>
 
@@ -99,7 +112,7 @@ export default function DoctorPanel() {
               <option value="">Select a report</option>
               {reports.map((report) => (
                 <option key={report.reportId} value={report.reportId}>
-                  {report.originalFileName} [{report.blockchainStatus}]
+                  {report.originalFileName} [{prettyStatus(report.blockchainStatus)}]
                 </option>
               ))}
             </select>
@@ -107,11 +120,24 @@ export default function DoctorPanel() {
 
           <div className="action-row">
             <button className="secondary-button" type="button" onClick={verifySelectedReport}>
-              Verify Selected Report
+              Verify Integrity
             </button>
             <button className="primary-button" type="button" onClick={finalizeSelectedReport}>
-              Finalize to Polygon
+              Finalize to Ganache
             </button>
+          </div>
+
+          <div className="backend-note">Uses `GET /api/patients/:abhaId/dashboard`, `GET /api/reports/:reportId/verify`, `POST /api/reports/:reportId/finalize-blockchain`</div>
+
+          <div className="trust-grid">
+            <div className="trust-cell">
+              <span>Blockchain</span>
+              <strong>{systemStatus?.blockchain || "syncing"}</strong>
+            </div>
+            <div className="trust-cell">
+              <span>Selected status</span>
+              <strong>{prettyStatus(selectedReport?.blockchainStatus)}</strong>
+            </div>
           </div>
 
           {error ? <div className="empty-state">{error}</div> : null}
@@ -120,18 +146,36 @@ export default function DoctorPanel() {
         <div className="panel col-8 stack">
           <div className="panel-header">
             <div>
-              <h2 className="panel-title">Verification Snapshot</h2>
-              <p className="panel-copy">
-                Dashboard and finalization responses appear here for audit-friendly review.
-              </p>
+              <h2 className="panel-title">Backend output</h2>
+              <p className="panel-copy">Raw JSON responses for review and debugging.</p>
             </div>
           </div>
 
-          {dashboard ? <div className="code-box">{JSON.stringify(dashboard, null, 2)}</div> : null}
+          {selectedReport ? (
+            <div className="metrics-strip">
+              <div className="metric-pill">
+                <span>Report</span>
+                <strong>{selectedReport.originalFileName}</strong>
+              </div>
+              <div className="metric-pill">
+                <span>Storage</span>
+                <strong>{selectedReport.storageMode || "local"}</strong>
+              </div>
+              <div className="metric-pill">
+                <span>Anchored</span>
+                <strong>{selectedReport.blockchainStatus?.includes("anchored") ? "true" : "false"}</strong>
+              </div>
+            </div>
+          ) : null}
+
           {verificationResult ? (
             <div className="code-box">{JSON.stringify(verificationResult, null, 2)}</div>
           ) : null}
+          {hashVerification ? (
+            <div className="code-box">{JSON.stringify(hashVerification, null, 2)}</div>
+          ) : null}
           {finalized ? <div className="code-box">{JSON.stringify(finalized, null, 2)}</div> : null}
+          {dashboard ? <div className="code-box">{JSON.stringify(dashboard, null, 2)}</div> : null}
           {!dashboard && !finalized ? (
             <div className="empty-state">
               Load a patient dashboard to inspect reports, wearable state, and blockchain readiness.

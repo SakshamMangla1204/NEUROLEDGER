@@ -1,25 +1,46 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { uploadReport, verifyReport } from "../api/api";
 
-export default function Upload() {
-  const [abhaId, setAbhaId] = useState("SAKSHAM@ABDM");
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      resolve(result.includes(",") ? result.split(",").pop() : result);
+    };
+    reader.onerror = () => reject(new Error("Unable to read the selected file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+export default function Upload({ currentAbhaId }) {
+  const [abhaId, setAbhaId] = useState(currentAbhaId);
   const [notes, setNotes] = useState("");
-  const [fileName, setFileName] = useState("");
-  const [mimeType, setMimeType] = useState("text/plain");
-  const [contentBase64, setContentBase64] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
   const [result, setResult] = useState(null);
   const [verificationResult, setVerificationResult] = useState(null);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setAbhaId(currentAbhaId);
+  }, [currentAbhaId]);
 
   async function onSubmit(event) {
     event.preventDefault();
     try {
+      setBusy(true);
       setError("");
+      if (!selectedFile) {
+        throw new Error("Choose a report file first.");
+      }
+
+      const contentBase64 = await readFileAsBase64(selectedFile);
       const data = await uploadReport({
         abhaId,
         notes,
-        fileName,
-        mimeType,
+        fileName: selectedFile.name,
+        mimeType: selectedFile.type || "application/octet-stream",
         contentBase64
       });
       setResult(data);
@@ -27,6 +48,8 @@ export default function Upload() {
     } catch (err) {
       setError(err.message);
       setResult(null);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -47,90 +70,112 @@ export default function Upload() {
 
   return (
     <div className="page">
-      <section className="hero-card">
-        <p className="eyebrow">Report Center</p>
-        <h1>Upload clinical documents in a dedicated flow instead of mixing report handling into a single prototype page.</h1>
-        <p>
-          The upload pathway stores the file, generates a hash, and returns the verification-ready
-          report object for the current identity.
-        </p>
+      <section className="section-header">
+        <span className="section-kicker">Reports</span>
+        <h2>Upload and verify report files</h2>
+        <p>Upload a file, let the backend hash it, then inspect the raw response.</p>
       </section>
 
-      <form className="panel stack" onSubmit={onSubmit}>
-        <div className="panel-header">
-          <div>
-            <h2 className="panel-title">Upload Medical Report</h2>
-            <p className="panel-copy">
-              Paste a base64 payload or a small text blob encoded as base64 to simulate report
-              ingestion before blockchain finalization.
-            </p>
+      <section className="page-grid">
+        <form className="panel col-7 stack" onSubmit={onSubmit}>
+          <div className="panel-header">
+            <div>
+              <h2 className="panel-title">Upload report</h2>
+              <p className="panel-copy">Writes to `POST /api/reports/upload`.</p>
+            </div>
           </div>
-        </div>
 
-        <div className="field-grid">
-          <div className="field">
-            <label htmlFor="report-abha">ABHA ID</label>
-            <input
-              id="report-abha"
-              value={abhaId}
-              onChange={(event) => setAbhaId(event.target.value)}
-            />
+          <div className="field-grid">
+            <div className="field">
+              <label htmlFor="report-abha">ABHA ID</label>
+              <input
+                id="report-abha"
+                value={abhaId}
+                onChange={(event) => setAbhaId(event.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="report-notes">Clinical notes</label>
+              <input
+                id="report-notes"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="CBC report, discharge summary, imaging note"
+              />
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="report-name">File Name</label>
-            <input
-              id="report-name"
-              value={fileName}
-              onChange={(event) => setFileName(event.target.value)}
-              placeholder="cbc-report.txt"
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="report-mime">MIME Type</label>
-            <input
-              id="report-mime"
-              value={mimeType}
-              onChange={(event) => setMimeType(event.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="report-notes">Notes</label>
-            <input
-              id="report-notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="CBC report or discharge summary"
-            />
-          </div>
-        </div>
 
-        <div className="field">
-          <label htmlFor="report-base64">Base64 Content</label>
-          <textarea
-            id="report-base64"
-            value={contentBase64}
-            onChange={(event) => setContentBase64(event.target.value)}
-            placeholder="VGhpcyBpcyBhIGRlbW8gcmVwb3J0Lg=="
-            required
-          />
-        </div>
+          <label className="file-dropzone" htmlFor="report-file">
+            <input
+              id="report-file"
+              type="file"
+              accept=".pdf,.txt,.png,.jpg,.jpeg"
+              onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
+            />
+            <span className="file-dropzone-kicker">Select medical report</span>
+            <strong>{selectedFile ? selectedFile.name : "Drop or choose a report file"}</strong>
+            <small>
+              {selectedFile
+                ? `${selectedFile.type || "unknown type"} | ${selectedFile.size} bytes`
+                : "PDF, text, or image documents supported through the current backend flow"}
+            </small>
+          </label>
 
-        <div className="action-row">
-          <button className="primary-button" type="submit">
-            Store Report + Hash
-          </button>
-          <button className="secondary-button" type="button" onClick={verifyUploadedReport}>
-            Verify Latest Upload
-          </button>
-        </div>
+          <div className="action-row">
+            <button className="primary-button" type="submit" disabled={busy}>
+              {busy ? "Uploading..." : "Upload to S3 + Anchor"}
+            </button>
+            <button className="secondary-button" type="button" onClick={verifyUploadedReport}>
+              Verify Latest Upload
+            </button>
+          </div>
 
-        {result ? <div className="code-box">{JSON.stringify(result, null, 2)}</div> : null}
-        {verificationResult ? (
-          <div className="code-box">{JSON.stringify(verificationResult, null, 2)}</div>
-        ) : null}
-        {error ? <div className="empty-state">{error}</div> : null}
-      </form>
+          <div className="backend-note">Verification operation: `GET /api/reports/:reportId/verify`</div>
+
+          {error ? <div className="empty-state">{error}</div> : null}
+        </form>
+
+        <aside className="panel col-5">
+          <div className="panel-header">
+            <div>
+              <h2 className="panel-title">Upload Result</h2>
+              <p className="panel-copy">Backend response and verification output.</p>
+            </div>
+          </div>
+
+          {result ? (
+            <div className="stack">
+              <div className="metrics-strip metrics-strip-vertical">
+                <div className="metric-pill metric-pill-wide">
+                  <span>Storage mode</span>
+                  <strong>{result.report?.storageMode}</strong>
+                </div>
+                <div className="metric-pill metric-pill-wide">
+                  <span>S3 bucket</span>
+                  <strong>{result.report?.s3Bucket || "local"}</strong>
+                </div>
+                <div className="metric-pill metric-pill-wide">
+                  <span>Blockchain status</span>
+                  <strong>{result.report?.blockchainStatus}</strong>
+                </div>
+                <div className="metric-pill metric-pill-wide">
+                  <span>Transaction</span>
+                  <strong>{result.report?.blockchainTransactionHash || "pending"}</strong>
+                </div>
+              </div>
+              <div className="code-box">{JSON.stringify(result, null, 2)}</div>
+            </div>
+          ) : (
+            <div className="empty-state">
+              Upload a report to inspect the S3 metadata, SHA-256 digest, and blockchain anchor.
+            </div>
+          )}
+
+          {verificationResult ? (
+            <div className="code-box">{JSON.stringify(verificationResult, null, 2)}</div>
+          ) : null}
+        </aside>
+      </section>
     </div>
   );
 }

@@ -8,10 +8,10 @@ const initialForm = {
   abhaId: "SAKSHAM@ABDM"
 };
 
-export default function Identity() {
+export default function Identity({ currentAbhaId, onAbhaChange }) {
   const [profiles, setProfiles] = useState([]);
-  const [form, setForm] = useState(initialForm);
-  const [verifyAbhaId, setVerifyAbhaId] = useState("SAKSHAM@ABDM");
+  const [form, setForm] = useState({ ...initialForm, abhaId: currentAbhaId });
+  const [verifyAbhaId, setVerifyAbhaId] = useState(currentAbhaId);
   const [registerResult, setRegisterResult] = useState(null);
   const [verifyResult, setVerifyResult] = useState(null);
   const [error, setError] = useState("");
@@ -30,6 +30,11 @@ export default function Identity() {
     loadProfiles();
   }, []);
 
+  useEffect(() => {
+    setForm((current) => ({ ...current, abhaId: currentAbhaId }));
+    setVerifyAbhaId(currentAbhaId);
+  }, [currentAbhaId]);
+
   async function onRegister(event) {
     event.preventDefault();
     try {
@@ -37,7 +42,7 @@ export default function Identity() {
       const data = await registerIdentity(form);
       setRegisterResult(data);
       setVerifyAbhaId(data.identity.abhaId);
-      setForm((current) => ({ ...current, abhaId: data.identity.abhaId }));
+      onAbhaChange(data.identity.abhaId);
       await loadProfiles();
     } catch (err) {
       setError(err.message);
@@ -50,6 +55,9 @@ export default function Identity() {
       setError("");
       const data = await verifyIdentity(verifyAbhaId);
       setVerifyResult(data);
+      if (data?.verified) {
+        onAbhaChange(data.abhaId);
+      }
     } catch (err) {
       setError(err.message);
       setVerifyResult(null);
@@ -58,29 +66,24 @@ export default function Identity() {
 
   return (
     <div className="page">
-      <section className="hero-card">
-        <p className="eyebrow">Identity Workflow</p>
-        <h1>Register and verify ABHA-linked identities before downstream clinical operations.</h1>
-        <p>
-          This page isolates identity creation and lookup so patient context is explicit before
-          analytics, wearable sync, or report storage begins.
-        </p>
+      <section className="section-header">
+        <span className="section-kicker">Identity</span>
+        <h2>Register and verify ABHA records</h2>
+        <p>Simple frontend controls for the identity endpoints used by the rest of the app.</p>
       </section>
 
       <section className="page-grid">
-        <form className="panel col-6 stack" onSubmit={onRegister}>
+        <form className="panel col-7 stack" onSubmit={onRegister}>
           <div className="panel-header">
             <div>
-              <h2 className="panel-title">Create Mock ABHA Identity</h2>
-              <p className="panel-copy">
-                Store a local ABHA-style identity that the backend can use across the pipeline.
-              </p>
+              <h2 className="panel-title">Create identity</h2>
+              <p className="panel-copy">Calls `POST /api/abha/register` and stores a new mock ABHA record.</p>
             </div>
           </div>
 
           <div className="field-grid">
             <div className="field">
-              <label htmlFor="name">Name</label>
+              <label htmlFor="name">Patient name</label>
               <input
                 id="name"
                 value={form.name}
@@ -100,7 +103,7 @@ export default function Identity() {
               />
             </div>
             <div className="field">
-              <label htmlFor="dob">DOB</label>
+              <label htmlFor="dob">Date of birth</label>
               <input
                 id="dob"
                 type="date"
@@ -115,7 +118,6 @@ export default function Identity() {
                 id="abha"
                 value={form.abhaId}
                 onChange={(event) => setForm({ ...form, abhaId: event.target.value })}
-                placeholder="SAKSHAM@ABDM"
                 required
               />
             </div>
@@ -127,18 +129,22 @@ export default function Identity() {
             </button>
           </div>
 
+          <div className="backend-note">Backend operation: `POST /api/abha/register`</div>
+
           {registerResult ? (
-            <div className="code-box">{JSON.stringify(registerResult, null, 2)}</div>
+            <div className="result-card">
+              <span className="result-card-label">Identity saved</span>
+              <strong>{registerResult.identity?.abhaId}</strong>
+              <p>{registerResult.identity?.name}</p>
+            </div>
           ) : null}
         </form>
 
-        <form className="panel col-6 stack" onSubmit={onVerify}>
+        <form className="panel col-5 stack" onSubmit={onVerify}>
           <div className="panel-header">
             <div>
-              <h2 className="panel-title">Verify Existing Identity</h2>
-              <p className="panel-copy">
-                Confirm that the backend recognizes the ABHA ID before running a patient flow.
-              </p>
+              <h2 className="panel-title">Verify identity</h2>
+              <p className="panel-copy">Calls `POST /api/abha/verify` and switches the active context.</p>
             </div>
           </div>
 
@@ -148,51 +154,65 @@ export default function Identity() {
               id="verify-abha"
               value={verifyAbhaId}
               onChange={(event) => setVerifyAbhaId(event.target.value)}
-              placeholder="SAKSHAM@ABDM"
               required
             />
           </div>
 
           <div className="action-row">
             <button className="primary-button" type="submit">
-              Verify Identity
+              Verify & Activate
             </button>
             <button className="secondary-button" type="button" onClick={loadProfiles}>
-              Refresh Known Profiles
+              Refresh Profiles
             </button>
           </div>
 
-          {verifyResult ? <div className="code-box">{JSON.stringify(verifyResult, null, 2)}</div> : null}
+          <div className="metric-pill metric-pill-wide">
+            <span>Current active identity</span>
+            <strong>{currentAbhaId}</strong>
+          </div>
+
+          <div className="backend-note">Backend operation: `POST /api/abha/verify`</div>
+
+          {verifyResult ? (
+            <div className="result-card">
+              <span className="result-card-label">Verification result</span>
+              <strong>{verifyResult.verified ? "Identity confirmed" : "Not found"}</strong>
+              <p>{verifyResult.abhaId}</p>
+            </div>
+          ) : null}
         </form>
       </section>
 
       <section className="panel">
         <div className="panel-header">
           <div>
-            <h2 className="panel-title">Known Profiles</h2>
-            <p className="panel-copy">
-              These identities are already persisted in the backend and available for the rest of
-              the NeuroLedger workflow.
-            </p>
+            <h2 className="panel-title">Registered Profiles</h2>
+            <p className="panel-copy">Profiles returned by `GET /api/abha/demo-profiles`.</p>
           </div>
         </div>
 
         {error ? <div className="empty-state">{error}</div> : null}
 
-        <div className="list">
+        <div className="profile-grid">
           {profiles.length ? (
             profiles.map((profile) => (
-              <div className="list-item" key={profile.abhaId}>
-                <h3>{profile.fullName}</h3>
-                <div className="inline-meta">
-                  <span>{profile.abhaId}</span>
-                  <span>{profile.phone}</span>
-                  <span>{profile.dob}</span>
-                </div>
-              </div>
+              <button
+                key={profile.abhaId}
+                type="button"
+                className={`profile-card${currentAbhaId === profile.abhaId ? " active" : ""}`}
+                onClick={() => {
+                  setVerifyAbhaId(profile.abhaId);
+                  onAbhaChange(profile.abhaId);
+                }}
+              >
+                <span>{profile.abhaId}</span>
+                <strong>{profile.fullName}</strong>
+                <small>{profile.phone}</small>
+              </button>
             ))
           ) : (
-            <div className="empty-state">No identities have been created yet.</div>
+            <div className="empty-state">No profiles registered yet.</div>
           )}
         </div>
       </section>

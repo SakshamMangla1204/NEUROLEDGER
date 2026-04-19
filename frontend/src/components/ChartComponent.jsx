@@ -4,20 +4,24 @@ export default function ChartComponent({ title, items }) {
       <div className="panel-header">
         <div>
           <h2 className="panel-title">{title}</h2>
-          <p className="panel-copy">Clinical signal distribution mapped into readable ranges.</p>
+          <p className="panel-copy">Quick view of the latest values being sent to or returned from the backend.</p>
         </div>
       </div>
 
       <div className="chart">
-        {items.map((item) => (
-          <div className="chart-row" key={item.label}>
-            <span>{item.label}</span>
-            <div className="chart-track">
-              <div className="chart-fill" style={{ width: `${item.value}%` }} />
+        {items.length ? (
+          items.map((item) => (
+            <div className="chart-row" key={item.label}>
+              <span>{item.label}</span>
+              <div className="chart-track">
+                <div className="chart-fill" style={{ width: `${item.value}%` }} />
+              </div>
+              <span>{item.value}%</span>
             </div>
-            <span>{item.value}%</span>
-          </div>
-        ))}
+          ))
+        ) : (
+          <div className="empty-state">No signal data loaded yet.</div>
+        )}
       </div>
     </section>
   );

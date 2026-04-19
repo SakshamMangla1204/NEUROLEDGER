@@ -2,29 +2,37 @@ import { NavLink } from "react-router-dom";
 
 const sections = [
   {
-    label: "Overview",
-    items: [{ to: "/dashboard", label: "Dashboard" }]
+    label: "Command",
+    items: [{ to: "/dashboard", label: "Overview", meta: "Live status" }]
   },
   {
     label: "Operations",
     items: [
-      { to: "/identity", label: "Identity" },
-      { to: "/analytics", label: "Wearable Sync" },
-      { to: "/reports", label: "Report Center" },
-      { to: "/verification", label: "Verification" }
+      { to: "/identity", label: "Identity", meta: "ABHA registry" },
+      { to: "/analytics", label: "Signals", meta: "Wearable sync" },
+      { to: "/reports", label: "Reports", meta: "Vault + anchor" },
+      { to: "/verification", label: "Trust", meta: "Verify + finalize" }
     ]
   }
 ];
 
-export default function Navbar() {
+function statusTone(value, positiveValue = "connected") {
+  return value === positiveValue || value === "running" || value === "active"
+    ? "status-positive"
+    : "status-neutral";
+}
+
+export default function Navbar({ currentAbhaId, systemStatus }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-head">
-        <div className="brand-mark">N</div>
-        <div className="brand-block">
-          <span className="brand-title">NeuroLedger</span>
-          <span className="brand-copy">Health verification stack</span>
-        </div>
+        <span className="brand-title">NeuroLedger</span>
+        <span className="brand-copy">Minimal frontend for backend operations</span>
+      </div>
+
+      <div className="patient-chip">
+        <span className="patient-chip-label">Active identity</span>
+        <strong>{currentAbhaId}</strong>
       </div>
 
       <nav className="sidebar-nav" aria-label="Primary navigation">
@@ -38,7 +46,10 @@ export default function Navbar() {
                 className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}
               >
                 <span className="sidebar-link-dot" />
-                {link.label}
+                <span className="sidebar-link-copy">
+                  <span>{link.label}</span>
+                  <small>{link.meta}</small>
+                </span>
               </NavLink>
             ))}
           </div>
@@ -46,10 +57,17 @@ export default function Navbar() {
       </nav>
 
       <div className="sidebar-footer">
-        <div className="wallet-chip">
-          <span className="wallet-status" />
-          <span>Backend online</span>
-          <span className="wallet-network">Local</span>
+        <div className={`status-card ${statusTone(systemStatus?.blockchain)}`}>
+          <span>Blockchain</span>
+          <strong>{systemStatus?.blockchain || "syncing"}</strong>
+        </div>
+        <div className={`status-card ${statusTone(systemStatus?.ml_engine, "running")}`}>
+          <span>ML engine</span>
+          <strong>{systemStatus?.ml_engine || "starting"}</strong>
+        </div>
+        <div className={`status-card ${statusTone(systemStatus?.storage, "s3")}`}>
+          <span>Storage</span>
+          <strong>{systemStatus?.storage || "pending"}</strong>
         </div>
       </div>
     </aside>

@@ -2,12 +2,24 @@ const JSON_HEADERS = {
   "Content-Type": "application/json"
 };
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+
+function buildUrl(path) {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  return `${API_BASE_URL}${path}`;
+}
+
 async function request(path, options = {}) {
-  const response = await fetch(path, {
-    headers: {
-      ...JSON_HEADERS,
-      ...(options.headers || {})
-    },
+  const headers = {
+    ...(options.body ? JSON_HEADERS : {}),
+    ...(options.headers || {})
+  };
+
+  const response = await fetch(buildUrl(path), {
+    headers,
     ...options
   });
 
@@ -23,6 +35,10 @@ async function request(path, options = {}) {
   }
 
   return data;
+}
+
+export async function fetchSystemStatus() {
+  return request("/api/system/status");
 }
 
 export async function fetchMockProfiles() {
@@ -70,6 +86,13 @@ export async function finalizeBlockchain(reportId) {
 
 export async function verifyReport(reportId) {
   return request(`/api/reports/${encodeURIComponent(reportId)}/verify`);
+}
+
+export async function verifyReportHash(hash) {
+  return request("/api/reports/verify", {
+    method: "POST",
+    body: JSON.stringify({ hash })
+  });
 }
 
 export async function postHealthMetrics(payload) {

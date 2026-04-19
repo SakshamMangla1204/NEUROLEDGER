@@ -62,7 +62,11 @@ The blockchain hash ledger is intended to stay local. If you want S3-backed medi
    `uvicorn app:app --reload`
 2. Start the backend from `backend/`
    `node server.js`
-3. Open `http://127.0.0.1:5000/app/index.html`
+3. For frontend development, start Vite from `frontend/`
+   `npm install && npm run dev`
+4. Open `http://127.0.0.1:5173`
+
+If you already built the frontend with `npm run build` inside `frontend/`, you can also open the backend-served app at `http://127.0.0.1:5050`.
 
 ### Example Mock ID
 

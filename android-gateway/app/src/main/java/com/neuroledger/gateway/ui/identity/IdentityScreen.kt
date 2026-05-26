@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -24,7 +25,9 @@ import com.neuroledger.gateway.viewmodel.IdentityUiState
 fun IdentityScreen(
     state: IdentityUiState,
     onAbhaIdChange: (String) -> Unit,
-    onSaveClick: () -> Unit
+    onBackendUrlChange: (String) -> Unit,
+    onSaveClick: () -> Unit,
+    onVerifyClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -58,8 +61,22 @@ fun IdentityScreen(
                     placeholder = { Text("SAKSHAM@ABDM") },
                     singleLine = true
                 )
+                Text("Backend URL", style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(
+                    value = state.backendUrl,
+                    onValueChange = onBackendUrlChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("http://10.0.2.2:5050/api/") },
+                    singleLine = true
+                )
                 Button(onClick = onSaveClick, modifier = Modifier.fillMaxWidth()) {
                     Text("Save")
+                }
+                Button(onClick = onVerifyClick, modifier = Modifier.fillMaxWidth()) {
+                    Text("Verify With NeuroLedger")
+                }
+                if (state.isVerifying) {
+                    CircularProgressIndicator()
                 }
             }
         }
@@ -82,7 +99,7 @@ fun IdentityScreen(
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "Gateway will attach this ABHA ID to every sync request.",
+                    text = "Use 10.0.2.2 for Android emulator. Use your laptop Wi-Fi IP for a real phone.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )

@@ -19,6 +19,10 @@ class WearableSyncRepository(
 
     fun saveAbhaId(abhaId: String) = identityRepository.saveAbhaId(abhaId)
 
+    fun savedBackendUrl(): String = identityRepository.getBackendUrl()
+
+    fun saveBackendUrl(url: String) = identityRepository.saveBackendUrl(url)
+
     fun hasConfiguredIdentity(): Boolean = identityRepository.hasConfiguredIdentity()
 
     fun currentStatus(): SyncStatus = syncStatusRepository.read()
@@ -33,21 +37,48 @@ class WearableSyncRepository(
 
     suspend fun readLatestMetrics(): WearableMetrics = healthConnectManager.readLatestMetrics()
 
-    suspend fun syncWithBackend(): SyncResult {
+    suspend fun verifySavedIdentity(): String {
         val abhaId = identityRepository.getAbhaId()
         require(abhaId.isNotBlank()) { "Please save an ABHA ID first." }
 
-        val metrics = healthConnectManager.readLatestMetrics()
+        val response = api.verifyIdentity(com.neuroledger.gateway.data.network.VerifyIdentityRequest(abhaId))
+        require(response.verified) { "ABHA ID was not verified by NeuroLedger." }
+        return response.patient?.name ?: response.abhaId ?: abhaId
+    }
+
+    suspend fun syncWithBackend(): SyncResult {
+        return syncMetrics(healthConnectManager.readLatestMetrics())
+    }
+
+    suspend fun syncDemoWithBackend(): SyncResult {
+        return syncMetrics(
+            WearableMetrics(
+                heartRate = 78,
+                steps = 6200,
+                sleepHours = 7.1,
+                glucose = 96
+            )
+        )
+    }
+
+    private suspend fun syncMetrics(metrics: WearableMetrics): SyncResult {
+        val abhaId = identityRepository.getAbhaId()
+        require(abhaId.isNotBlank()) { "Please save an ABHA ID first." }
+
         val response = api.postHealthMetrics(
             HealthMetricsRequest(
                 abhaId = abhaId,
                 heartRate = metrics.heartRate,
                 steps = metrics.steps,
-                sleepHours = metrics.sleepHours
+                sleepHours = metrics.sleepHours,
+                glucose = metrics.glucose
             )
         )
 
-        val syncStatus = response.toSyncStatus()
+        val prediction = runCatching { api.analyzeLatestWearable(abhaId).prediction }.getOrNull()
+        val dashboard = runCatching { api.getDashboard(abhaId) }.getOrNull()
+        val system = runCatching { api.getSystemStatus() }.getOrNull()
+        val syncStatus = response.toSyncStatus(prediction, dashboard, system)
         syncStatusRepository.save(syncStatus)
 
         return SyncResult(
@@ -57,11 +88,22 @@ class WearableSyncRepository(
         )
     }
 
-    private fun HealthMetricsResponse.toSyncStatus(): SyncStatus {
+    private fun HealthMetricsResponse.toSyncStatus(
+        prediction: com.neuroledger.gateway.data.network.PredictionPayload?,
+        dashboard: com.neuroledger.gateway.data.network.DashboardResponse?,
+        system: com.neuroledger.gateway.data.network.SystemStatusResponse?
+    ): SyncStatus {
+        val totalReports = dashboard?.reportSummary?.totalReports ?: 0
+        val anchoredReports = dashboard?.reportSummary?.anchoredReports ?: 0
         return SyncStatus(
-            riskLevel = riskLevel,
+            riskLevel = prediction?.riskLevel?.uppercase() ?: riskLevel,
             lastSynced = formatTimestamp(wearable.receivedAt),
-            uploadStatus = "SUCCESS"
+            uploadStatus = "SUCCESS",
+            mlScore = prediction?.overallScore?.toString() ?: "--",
+            recommendation = prediction?.recommendation ?: "Synced. Run the web dashboard for full review.",
+            blockchainStatus = system?.blockchain ?: if (dashboard?.blockchain?.verified == true) "connected" else "--",
+            reportStatus = "$anchoredReports/$totalReports anchored",
+            storageStatus = system?.storage ?: "--"
         )
     }
 

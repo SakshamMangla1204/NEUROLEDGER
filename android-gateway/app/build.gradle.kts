@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.neuroledger.gateway"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.neuroledger.gateway"
@@ -20,7 +20,9 @@ android {
             useSupportLibrary = true
         }
 
-        buildConfigField("String", "BASE_URL", "\"http://YOUR_LOCAL_IP:3000/api/\"")
+        val neuroLedgerBaseUrl =
+            providers.gradleProperty("NEUROLEDGER_BASE_URL").getOrElse("http://10.0.2.2:5050/api/")
+        buildConfigField("String", "BASE_URL", "\"$neuroLedgerBaseUrl\"")
     }
 
     buildTypes {

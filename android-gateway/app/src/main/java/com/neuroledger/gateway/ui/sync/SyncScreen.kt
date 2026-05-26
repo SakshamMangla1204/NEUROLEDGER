@@ -31,6 +31,7 @@ fun SyncScreen(
     permissionContract: androidx.activity.result.contract.ActivityResultContract<Set<String>, Set<String>>,
     onPermissionsResult: () -> Unit,
     onRefreshMetrics: () -> Unit,
+    onDemoSyncClick: () -> Unit,
     onSyncClick: () -> Unit
 ) {
     val permissionLauncher = rememberLauncherForActivityResult(permissionContract) {
@@ -91,8 +92,12 @@ fun SyncScreen(
                 MetricRow("Heart rate", "${state.metrics.heartRate} bpm")
                 MetricRow("Steps", state.metrics.steps.toString())
                 MetricRow("Sleep hours", String.format("%.1f", state.metrics.sleepHours))
+                MetricRow("Glucose", "${state.metrics.glucose} mg/dL")
                 Button(onClick = onRefreshMetrics, modifier = Modifier.fillMaxWidth()) {
                     Text("Read Latest Health Connect Data")
+                }
+                Button(onClick = onDemoSyncClick, modifier = Modifier.fillMaxWidth()) {
+                    Text("SYNC DEMO DATA")
                 }
                 Button(onClick = onSyncClick, modifier = Modifier.fillMaxWidth()) {
                     Text("SYNC WITH NEUROLEDGER")
@@ -103,8 +108,16 @@ fun SyncScreen(
                 state.errorMessage?.let {
                     Text(text = it, color = MaterialTheme.colorScheme.error)
                 }
+                MetricRow("Backend status", state.uploadStatus)
+                MetricRow("Risk", state.lastRiskLevel)
+                MetricRow("ML score", state.mlScore)
                 Text(
-                    text = "Designed to read Health Connect and hand off cleanly to the NeuroLedger backend.",
+                    text = state.recommendation,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = DeepNavy
+                )
+                Text(
+                    text = "Use demo sync when Health Connect has no wearable records yet.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )

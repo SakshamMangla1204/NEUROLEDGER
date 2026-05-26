@@ -93,5 +93,6 @@ class HealthConnectManager(private val context: Context) {
 data class WearableMetrics(
     val heartRate: Int = 0,
     val steps: Int = 0,
-    val sleepHours: Double = 0.0
+    val sleepHours: Double = 0.0,
+    val glucose: Int = 95
 )

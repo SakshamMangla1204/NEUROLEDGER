@@ -20,6 +20,7 @@ export default function Upload({ currentAbhaId }) {
   const [result, setResult] = useState(null);
   const [verificationResult, setVerificationResult] = useState(null);
   const [error, setError] = useState("");
+  const [uploadAlert, setUploadAlert] = useState(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export default function Upload({ currentAbhaId }) {
     try {
       setBusy(true);
       setError("");
+      setUploadAlert(null);
       if (!selectedFile) {
         throw new Error("Choose a report file first.");
       }
@@ -44,9 +46,14 @@ export default function Upload({ currentAbhaId }) {
         contentBase64
       });
       setResult(data);
+      setUploadAlert(data.warning ? { tone: "warning", message: data.warning.message } : null);
       setVerificationResult(null);
     } catch (err) {
       setError(err.message);
+      setUploadAlert({
+        tone: err.status === 409 ? "danger" : "warning",
+        message: err.payload?.detail || err.message,
+      });
       setResult(null);
     } finally {
       setBusy(false);
@@ -56,6 +63,7 @@ export default function Upload({ currentAbhaId }) {
   async function verifyUploadedReport() {
     try {
       setError("");
+      setUploadAlert(null);
       const reportId = result?.report?.reportId;
       if (!reportId) {
         throw new Error("Upload a report first.");
@@ -132,7 +140,14 @@ export default function Upload({ currentAbhaId }) {
 
           <div className="backend-note">Verification operation: `GET /api/reports/:reportId/verify`</div>
 
-          {error ? <div className="empty-state">{error}</div> : null}
+          {uploadAlert ? (
+            <div className={`upload-alert upload-alert-${uploadAlert.tone}`} role="alert">
+              <strong>{uploadAlert.tone === "danger" ? "Tamper detected" : "Doctor review suggested"}</strong>
+              <p>{uploadAlert.message}</p>
+            </div>
+          ) : null}
+
+          {error && !uploadAlert ? <div className="empty-state">{error}</div> : null}
         </form>
 
         <aside className="panel col-5">

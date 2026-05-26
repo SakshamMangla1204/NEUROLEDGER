@@ -1,5 +1,5 @@
 const { checkMlHealth, predictHealth } = require("../services/mlService");
-const { BLOCKCHAIN_ENABLED } = require("../blockchain/config");
+const { BLOCKCHAIN_ENABLED, CONTRACT_ADDRESS } = require("../blockchain/config");
 const web3 = require("../blockchain/web3");
 const { STORAGE_MODE } = require("../services/storageService");
 
@@ -28,7 +28,11 @@ async function getSystemStatus(req, res) {
   };
 
   try {
-    if (BLOCKCHAIN_ENABLED && web3) {
+    if (!BLOCKCHAIN_ENABLED) {
+      status.blockchain = "disabled";
+    } else if (!CONTRACT_ADDRESS) {
+      status.blockchain = "not_configured";
+    } else if (web3) {
       const listening = await web3.eth.net.isListening();
       status.blockchain = listening ? "connected" : "disconnected";
     } else {

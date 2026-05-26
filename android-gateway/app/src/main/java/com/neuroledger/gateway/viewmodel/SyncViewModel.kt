@@ -55,16 +55,26 @@ class SyncViewModel(
     }
 
     fun syncWithNeuroLedger() {
+        sync { repository.syncWithBackend() }
+    }
+
+    fun syncDemoWithNeuroLedger() {
+        sync { repository.syncDemoWithBackend() }
+    }
+
+    private fun sync(action: suspend () -> com.neuroledger.gateway.repository.SyncResult) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isSyncing = true, errorMessage = null)
-            runCatching { repository.syncWithBackend() }
+            runCatching { action() }
                 .onSuccess { result ->
                     _state.value = _state.value.copy(
                         isSyncing = false,
                         metrics = result.metrics,
                         lastRiskLevel = result.response.riskLevel,
                         lastSynced = result.status.lastSynced,
-                        uploadStatus = result.status.uploadStatus
+                        uploadStatus = result.status.uploadStatus,
+                        mlScore = result.status.mlScore,
+                        recommendation = result.status.recommendation
                     )
                 }
                 .onFailure { error ->
@@ -99,5 +109,7 @@ data class SyncUiState(
     val lastRiskLevel: String = "--",
     val lastSynced: String = "--",
     val uploadStatus: String = "IDLE",
+    val mlScore: String = "--",
+    val recommendation: String = "--",
     val errorMessage: String? = null
 )

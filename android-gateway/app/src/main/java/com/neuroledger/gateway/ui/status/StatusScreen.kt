@@ -70,6 +70,14 @@ fun StatusScreen(
                         DeepNavy
                     }
                 )
+                Text("ML Score: ${state.mlScore}", style = MaterialTheme.typography.bodyLarge)
+                Text("Blockchain: ${state.blockchainStatus}", style = MaterialTheme.typography.bodyLarge)
+                Text("Reports: ${state.reportStatus}", style = MaterialTheme.typography.bodyLarge)
+                Text("Storage: ${state.storageStatus}", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "Recommendation: ${state.recommendation}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 Button(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
                     Text("Refresh Status")
                 }

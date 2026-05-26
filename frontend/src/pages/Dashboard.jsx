@@ -7,6 +7,47 @@ function prettyStatus(value) {
   return String(value || "pending").replace(/_/g, " ");
 }
 
+function reportDisplayStatus(report) {
+  if (report?.integrityStatus === "tampered" || report?.blockchainStatus === "tampered") {
+    return "tampered";
+  }
+
+  return report?.blockchainStatus || "pending";
+}
+
+function reportBadgeTone(report) {
+  const status = reportDisplayStatus(report);
+  if (status === "tampered") {
+    return "danger";
+  }
+
+  return status.includes("anchored") ? "success" : "muted";
+}
+
+function latestValue(records, key, fallback) {
+  const record = records[records.length - 1];
+  const value = Number(record?.[key]);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function improvementPercent(records, key, normalize) {
+  if (!records.length) {
+    return 0;
+  }
+
+  const first = Number(records[0]?.[key]);
+  const latest = latestValue(records, key, first);
+
+  if (!Number.isFinite(first) || !Number.isFinite(latest)) {
+    return 0;
+  }
+
+  const firstScore = normalize(first);
+  const latestScore = normalize(latest);
+
+  return Math.max(0, Math.min(100, Math.round(latestScore - firstScore + 50)));
+}
+
 export default function Dashboard({ abhaId, systemStatus }) {
   const [dashboard, setDashboard] = useState(null);
   const [error, setError] = useState("");
@@ -38,9 +79,31 @@ export default function Dashboard({ abhaId, systemStatus }) {
   const reports = dashboard?.reports || [];
   const latestReport = reports.length ? reports[reports.length - 1] : null;
   const healthSignalChart = useMemo(() => {
+    const history = dashboard?.identity?.metrics || [];
     const wearable = dashboard?.wearable;
-    if (!wearable) {
+    if (!wearable && !history.length) {
       return [];
+    }
+
+    if (history.length > 1) {
+      return [
+        {
+          label: "Cardio improvement",
+          value: improvementPercent(history, "heart_rate", (value) => Math.max(0, 100 - Math.abs(value - 78) * 3))
+        },
+        {
+          label: "Sleep improvement",
+          value: improvementPercent(history, "sleep_hours", (value) => Math.min(100, (value / 8) * 100))
+        },
+        {
+          label: "Activity improvement",
+          value: improvementPercent(history, "steps", (value) => Math.min(100, (value / 10000) * 100))
+        },
+        {
+          label: "Glucose improvement",
+          value: improvementPercent(history, "glucose", (value) => (value > 100 ? 68 : 92))
+        }
+      ];
     }
 
     return [
@@ -65,12 +128,6 @@ export default function Dashboard({ abhaId, systemStatus }) {
           value={abhaId}
           meta="Current working patient context"
           tone="primary"
-        />
-        <HealthCard
-          label="ML Risk Score"
-          value={dashboard?.mlRiskScore ?? "--"}
-          meta={`ML engine ${systemStatus?.ml_engine || "starting"}`}
-          tone="accent"
         />
         <HealthCard
           label="Anchored Reports"
@@ -108,16 +165,8 @@ export default function Dashboard({ abhaId, systemStatus }) {
                 <strong>{dashboard.wearable?.risk_level || "Pending"}</strong>
               </div>
               <div className="metric-pill">
-                <span>Blockchain</span>
-                <strong>{dashboard.blockchain?.verified ? "Verified" : "Pending"}</strong>
-              </div>
-              <div className="metric-pill">
                 <span>Latest file</span>
                 <strong>{latestReport?.originalFileName || "No uploads yet"}</strong>
-              </div>
-              <div className="operation-card">
-                <span className="endpoint-label">Endpoint</span>
-                <strong>`GET /api/patients/{abhaId}/dashboard`</strong>
               </div>
               <div className="operation-card">
                 <span className="endpoint-label">Last response</span>
@@ -160,7 +209,7 @@ export default function Dashboard({ abhaId, systemStatus }) {
 
       <section className="page-grid">
         <div className="col-5">
-          <ChartComponent title="Wearable values" items={healthSignalChart} />
+          <ChartComponent title="Wearable improvement" items={healthSignalChart} />
         </div>
 
         <div className="panel col-7">
@@ -180,14 +229,18 @@ export default function Dashboard({ abhaId, systemStatus }) {
                       <h3>{report.originalFileName}</h3>
                       <p>{report.reportId}</p>
                     </div>
-                    <span className={`badge badge-${report.blockchainStatus?.includes("anchored") ? "success" : "muted"}`}>
-                      {prettyStatus(report.blockchainStatus)}
+                    <span className={`badge badge-${reportBadgeTone(report)}`}>
+                      {prettyStatus(reportDisplayStatus(report))}
                     </span>
                   </div>
                   <div className="inline-meta">
                     <span>{report.storageMode || "local"}</span>
                     <span>{report.s3Bucket || "local vault"}</span>
-                    <span>{report.blockchainTransactionHash || "tx pending"}</span>
+                    <span>
+                      {report.integrityStatus === "tampered"
+                        ? report.tamperReason || "hash mismatch"
+                        : report.blockchainTransactionHash || "tx pending"}
+                    </span>
                   </div>
                 </div>
               ))

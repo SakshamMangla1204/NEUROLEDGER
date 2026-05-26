@@ -18,6 +18,14 @@ const titles = {
   "/verification": "Verification"
 };
 
+const subtitles = {
+  "/dashboard": "Live clinical trust posture across patient identity, signal ingestion, report storage, and blockchain verification.",
+  "/identity": "Create and verify ABHA-style patient identities before attaching signals or medical report records.",
+  "/analytics": "Review wearable health signals, risk scoring, and the latest patient summary from the backend.",
+  "/reports": "Upload clinical documents into the report vault and anchor their hashes for integrity checks.",
+  "/verification": "Inspect report authenticity, blockchain state, and finalization evidence from one review surface."
+};
+
 const SESSION_KEY = "neuroledger.session";
 
 function readSession() {
@@ -54,6 +62,7 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const title = titles[location.pathname] || "NeuroLedger";
+  const subtitle = subtitles[location.pathname] || "Secure clinical records, wearable signals, and blockchain verification in one workspace.";
   const [session, setSession] = useState(() => readSession());
   const [currentAbhaId, setCurrentAbhaId] = useState(() => readSession()?.currentAbhaId || "SAKSHAM@ABDM");
   const [systemStatus, setSystemStatus] = useState(null);
@@ -165,8 +174,7 @@ export default function App() {
             <p className="workspace-kicker">{session.operatorName}</p>
             <h1 className="workspace-title">{title}</h1>
             <p className="workspace-subtitle">
-              Manage identity verification, wearable ingestion, report handling, and blockchain
-              trust checks from one signed-in workspace.
+              {subtitle}
             </p>
           </div>
           <div className="workspace-actions">

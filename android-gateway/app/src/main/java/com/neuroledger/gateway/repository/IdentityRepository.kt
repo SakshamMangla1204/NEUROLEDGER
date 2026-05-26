@@ -1,6 +1,8 @@
 package com.neuroledger.gateway.repository
 
 import android.content.SharedPreferences
+import com.neuroledger.gateway.BuildConfig
+import com.neuroledger.gateway.data.network.NetworkModule
 
 class IdentityRepository(private val sharedPreferences: SharedPreferences) {
     companion object {
@@ -16,4 +18,17 @@ class IdentityRepository(private val sharedPreferences: SharedPreferences) {
     }
 
     fun hasConfiguredIdentity(): Boolean = getAbhaId().isNotBlank()
+
+    fun saveBackendUrl(url: String) {
+        val normalized = url.trim().ifBlank { BuildConfig.BASE_URL }
+        val withTrailingSlash = if (normalized.endsWith("/")) normalized else "$normalized/"
+        sharedPreferences.edit()
+            .putString(NetworkModule.KEY_BACKEND_URL, withTrailingSlash)
+            .apply()
+    }
+
+    fun getBackendUrl(): String {
+        return sharedPreferences.getString(NetworkModule.KEY_BACKEND_URL, BuildConfig.BASE_URL)
+            ?: BuildConfig.BASE_URL
+    }
 }

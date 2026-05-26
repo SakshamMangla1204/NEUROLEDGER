@@ -13,7 +13,7 @@ class ServiceLocator(context: Context) {
     private val sharedPreferences =
         appContext.getSharedPreferences("neuroledger_gateway", Context.MODE_PRIVATE)
 
-    private val api: NeuroLedgerApi = NetworkModule.createApi()
+    private val api: NeuroLedgerApi = NetworkModule.createApi(sharedPreferences)
     private val healthConnectManager = HealthConnectManager(appContext)
     private val identityRepository = IdentityRepository(sharedPreferences)
     private val syncStatusRepository = SyncStatusRepository(sharedPreferences)

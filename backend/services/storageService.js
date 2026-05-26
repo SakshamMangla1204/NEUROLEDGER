@@ -13,6 +13,20 @@ function sanitizeFilename(fileName) {
   return String(fileName || "report.bin").replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
+function resolveLocalReportPath(report) {
+  const candidates = [
+    report.filePath,
+    report.storedFileName ? path.join(REPORTS_DIR, report.storedFileName) : null,
+  ].filter(Boolean);
+
+  const existingPath = candidates.find((candidate) => fs.existsSync(candidate));
+  if (existingPath) {
+    return existingPath;
+  }
+
+  return candidates[0] || null;
+}
+
 function ensureLocalDirectory() {
   fs.mkdirSync(REPORTS_DIR, { recursive: true });
 }
@@ -122,7 +136,60 @@ async function readReportBuffer(report) {
     return readS3ReportBuffer(report);
   }
 
-  return fs.readFileSync(report.filePath);
+  const filePath = resolveLocalReportPath(report);
+  if (!filePath) {
+    throw new Error("Local report file path is missing");
+  }
+
+  return fs.readFileSync(filePath);
+}
+
+async function overwriteS3ReportBuffer(report, buffer) {
+  let s3ClientModule;
+  try {
+    s3ClientModule = require("@aws-sdk/client-s3");
+  } catch (error) {
+    throw new Error("Install @aws-sdk/client-s3 to update S3-backed reports");
+  }
+
+  const { PutObjectCommand, S3Client } = s3ClientModule;
+  const client = new S3Client({ region: process.env.AWS_REGION });
+  await client.send(
+    new PutObjectCommand({
+      Bucket: report.s3Bucket || getS3BucketName(),
+      Key: report.s3Key,
+      Body: buffer,
+      ContentType: report.mimeType || "application/octet-stream",
+    })
+  );
+}
+
+async function overwriteReportBuffer(report, buffer) {
+  if (report.storageMode === "hash_only") {
+    throw new Error("Hash-only records do not have a stored file to tamper.");
+  }
+
+  if (report.storageMode === "s3") {
+    if (!report.s3Key) {
+      throw new Error("S3 report key is missing");
+    }
+    await overwriteS3ReportBuffer(report, buffer);
+    return {
+      storageMode: "s3",
+      storageKey: report.s3Key,
+    };
+  }
+
+  const filePath = resolveLocalReportPath(report);
+  if (!filePath) {
+    throw new Error("Local report file path is missing");
+  }
+
+  fs.writeFileSync(filePath, buffer);
+  return {
+    storageMode: "local",
+    storageKey: filePath,
+  };
 }
 
 async function getReportAccessDescriptor(report) {
@@ -158,7 +225,12 @@ async function getReportAccessDescriptor(report) {
     return { type: "redirect", target };
   }
 
-  return { type: "local", target: report.filePath };
+  const filePath = resolveLocalReportPath(report);
+  if (!filePath) {
+    throw new Error("Local report file path is missing");
+  }
+
+  return { type: "local", target: filePath };
 }
 
 module.exports = {
@@ -166,4 +238,5 @@ module.exports = {
   getReportAccessDescriptor,
   persistReportBinary,
   readReportBuffer,
+  overwriteReportBuffer,
 };

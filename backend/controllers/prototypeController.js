@@ -20,6 +20,7 @@ const {
   listReportsByAbhaId,
   saveReport,
   saveReportHashOnly,
+  simulateReportTamper,
   updateReport,
   verifyReportIntegrity,
 } = require("../services/reportService");
@@ -72,7 +73,9 @@ function buildDashboard(abhaId, verification) {
     blockchainAnchor: latestAnchorForReport(report.reportId),
   }));
   const anchoredReports = enrichedReports.filter(
-    (report) => report.blockchainStatus === "anchored_to_mock_chain" || report.blockchainStatus === "anchored_onchain"
+    (report) =>
+      report.integrityStatus !== "tampered" &&
+      (report.blockchainStatus === "anchored_to_mock_chain" || report.blockchainStatus === "anchored_onchain")
   );
 
   return {
@@ -201,6 +204,18 @@ async function ingestWearableMetrics(req, res) {
     });
   }
 
+  const validationError = validateWearableMetricInput({
+    heartRate,
+    steps,
+    sleepHours,
+    glucose,
+  });
+  if (validationError) {
+    return res.status(400).json({
+      error: validationError,
+    });
+  }
+
   const verification = verifyAbhaId(abhaId);
   if (!verification.verified) {
     return res.status(404).json(verification);
@@ -234,11 +249,11 @@ async function analyzeFromWearable(req, res) {
     });
   }
   const metrics = {
-    resting_heart_rate: wearable.heart_rate,
-    spo2: 98,
-    glucose: wearable.glucose,
-    sleep_hours: wearable.sleep_hours,
-    workout_minutes: estimateWorkoutMinutes(wearable.steps),
+    resting_heart_rate: boundedMetric(wearable.heart_rate, 30, 220, 78),
+    spo2: boundedMetric(wearable.spo2, 50, 100, 98),
+    glucose: boundedMetric(wearable.glucose, 40, 500, 95),
+    sleep_hours: boundedMetric(wearable.sleep_hours, 0, 24, 7),
+    workout_minutes: boundedMetric(estimateWorkoutMinutes(wearable.steps), 0, 300, 0),
     age: identity.dob ? calculateAge(identity.dob) : req.body.age,
   };
 
@@ -268,6 +283,69 @@ async function analyzeFromWearable(req, res) {
     const status = error.response?.status || 500;
     return res.status(status).json({
       error: "Wearable-based analysis failed",
+      detail: error.response?.data || error.message,
+    });
+  }
+}
+
+async function analyzeWearableHistory(req, res) {
+  const abhaId = normalizeAbhaId(req.params.abhaId || req.body.abhaId);
+  const verification = verifyAbhaId(abhaId);
+
+  if (!verification.verified) {
+    return res.status(404).json(verification);
+  }
+
+  const identity = verification.patient;
+  const history = identity.metrics || [];
+
+  if (!history.length) {
+    return res.status(404).json({
+      error: "No wearable metrics found. Ingest data through POST /api/health-metrics first.",
+    });
+  }
+
+  try {
+    const age = identity.dob ? calculateAge(identity.dob) : Number(req.body.age) || 30;
+    const trend = [];
+
+    for (const record of history) {
+      const input = {
+        resting_heart_rate: boundedMetric(record.heart_rate, 30, 220, 78),
+        spo2: boundedMetric(record.spo2, 50, 100, 98),
+        glucose: boundedMetric(record.glucose, 40, 500, 95),
+        sleep_hours: boundedMetric(record.sleep_hours, 0, 24, 7),
+        workout_minutes: boundedMetric(estimateWorkoutMinutes(record.steps), 0, 300, 0),
+        age,
+      };
+      const prediction = await predictHealth(input);
+
+      trend.push({
+        receivedAt: record.received_at,
+        source: record.source || "health_connect_bridge",
+        input,
+        ml: prediction,
+        normalizedSignals: record.normalized_signals,
+      });
+    }
+
+    const latest = trend[trend.length - 1];
+
+    return res.status(200).json({
+      abhaId,
+      generatedAt: new Date().toISOString(),
+      recordsAnalyzed: trend.length,
+      dateRange: {
+        from: trend[0]?.receivedAt || null,
+        to: latest?.receivedAt || null,
+      },
+      latestPrediction: latest?.ml || null,
+      trend,
+    });
+  } catch (error) {
+    const status = error.response?.status || 500;
+    return res.status(status).json({
+      error: "Wearable history ML analysis failed",
       detail: error.response?.data || error.message,
     });
   }
@@ -360,14 +438,16 @@ async function uploadReport(req, res) {
       reportId: anchoredReport.reportId,
       verification,
       report: anchoredReport,
+      warning: report.uploadWarning || null,
       blockchainAnchor: anchor,
       blockchainSync,
       dashboard: buildDashboard(abhaId, verification),
     });
   } catch (error) {
-    return res.status(400).json({
-      error: "Report upload failed",
+    return res.status(error.statusCode || 400).json({
+      error: error.code === "REPORT_TAMPERED_DUPLICATE_NAME" ? "Report tampering detected" : "Report upload failed",
       detail: error.message,
+      report: error.report || null,
     });
   }
 }
@@ -427,14 +507,30 @@ async function verifyReport(req, res) {
   try {
     const localVerification = await verifyReportIntegrity(req.params.reportId);
     const hashToVerify = req.query.hash || report.sha256;
-    const anchoredOnBlockchain = await verifyHashOnBlockchain(hashToVerify);
-    const authentic =
-      localVerification.status === "authentic" && Boolean(anchoredOnBlockchain);
+    let anchoredOnBlockchain = false;
+    let blockchainCheck = {
+      available: true,
+      status: "checked",
+      error: null,
+    };
+
+    try {
+      anchoredOnBlockchain = await verifyHashOnBlockchain(hashToVerify);
+    } catch (blockchainError) {
+      blockchainCheck = {
+        available: false,
+        status: "unavailable",
+        error: blockchainError.message,
+      };
+    }
+
+    const authentic = localVerification.status === "authentic";
 
     return res.status(200).json({
       ...localVerification,
       hashChecked: hashToVerify,
       anchoredOnBlockchain,
+      blockchainCheck,
       authentic,
       status: authentic ? "authentic" : "tampered",
     });
@@ -454,9 +550,60 @@ async function verifyReportHash(req, res) {
 
   try {
     const verified = await verifyHashOnBlockchain(hash);
-    return res.status(200).json({ verified, hash });
+    return res.status(200).json({
+      verified,
+      hash,
+      blockchainAvailable: true,
+    });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(200).json({
+      verified: false,
+      hash,
+      blockchainAvailable: false,
+      error: error.message,
+    });
+  }
+}
+
+async function simulateTamperedReport(req, res) {
+  const report = getReportById(req.params.reportId);
+  if (!report) {
+    return res.status(404).json({ error: "Report not found" });
+  }
+
+  try {
+    const tamperResult = await simulateReportTamper(report.reportId);
+    const verification = await verifyReportIntegrity(report.reportId);
+    const updatedReport = updateReport(report.reportId, (current) => ({
+      ...current,
+      integrityStatus: "tampered",
+      blockchainStatus: "tampered",
+      previousBlockchainStatus: current.previousBlockchainStatus || current.blockchainStatus,
+      tamperDetectedAt: new Date().toISOString(),
+      tamperReason: "stored_file_modified",
+      tamperEvidence: {
+        storedHash: verification.storedHash,
+        recomputedHash: verification.recomputedHash,
+      },
+    }));
+
+    return res.status(200).json({
+      success: true,
+      status: "tampered",
+      message: "Stored report content was modified for tamper simulation.",
+      reportId: report.reportId,
+      originalFileName: report.originalFileName,
+      storageMode: report.storageMode,
+      storageKey: report.s3Key || report.storageKey || report.filePath,
+      tamperedBytes: tamperResult.tamperedBytes,
+      verification,
+      report: updatedReport,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      error: "Unable to simulate report tampering",
+      detail: error.message,
+    });
   }
 }
 
@@ -531,9 +678,40 @@ function estimateWorkoutMinutes(steps) {
   return Math.max(0, Math.round(value / 120));
 }
 
+function boundedMetric(value, min, max, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function validateWearableMetricInput({ heartRate, steps, sleepHours, glucose }) {
+  const checks = [
+    ["heart_rate", heartRate, 30, 220],
+    ["steps", steps, 0, 200000],
+    ["sleep_hours", sleepHours, 0, 24],
+  ];
+
+  if (glucose !== undefined && glucose !== null && glucose !== "") {
+    checks.push(["glucose", glucose, 40, 500]);
+  }
+
+  for (const [field, value, min, max] of checks) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < min || numeric > max) {
+      return `${field} must be a number between ${min} and ${max}`;
+    }
+  }
+
+  return null;
+}
+
 module.exports = {
   analyzePatient,
   analyzeFromWearable,
+  analyzeWearableHistory,
   finalizeReportOnBlockchain,
   getDashboard,
   getDemoProfiles,
@@ -542,6 +720,7 @@ module.exports = {
   ingestWearableMetrics,
   listReports,
   registerAbhaIdentity,
+  simulateTamperedReport,
   syncWearable,
   uploadReport,
   verifyAbha,

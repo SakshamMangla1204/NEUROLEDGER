@@ -6,7 +6,7 @@ const {
   readJson,
   writeJson,
 } = require("./localStoreService");
-const { persistReportBinary, readReportBuffer } = require("./storageService");
+const { overwriteReportBuffer, persistReportBinary, readReportBuffer } = require("./storageService");
 
 function decodeBase64Payload(contentBase64) {
   const raw = String(contentBase64 || "");
@@ -16,6 +16,15 @@ function decodeBase64Payload(contentBase64) {
 
 function sha256(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
+}
+
+function normalizeFileName(fileName) {
+  return String(fileName || "report.bin").trim().toLowerCase();
+}
+
+function normalizeComparableName(fileName) {
+  const normalized = normalizeFileName(fileName).replace(/\.[^.]+$/, "");
+  return normalized.replace(/[^a-z0-9]/g, "");
 }
 
 function listAllReports() {
@@ -54,6 +63,69 @@ function updateReport(reportId, updater) {
   return updatedRecord;
 }
 
+function findExactFileNameMatch({ abhaId, fileName }) {
+  const normalizedName = normalizeFileName(fileName);
+
+  return [...listReportsByAbhaId(abhaId)]
+    .reverse()
+    .find((report) => normalizeFileName(report.originalFileName) === normalizedName);
+}
+
+function findSimilarFileNameMatch({ abhaId, fileName }) {
+  const comparableName = normalizeComparableName(fileName);
+  if (comparableName.length < 4) {
+    return null;
+  }
+
+  return [...listReportsByAbhaId(abhaId)]
+    .reverse()
+    .find((report) => {
+      const reportName = normalizeComparableName(report.originalFileName);
+      if (!reportName || reportName === comparableName) {
+        return false;
+      }
+
+      return reportName.includes(comparableName) || comparableName.includes(reportName);
+    });
+}
+
+function markReportTampered(report, attemptedHash, attemptedFileName) {
+  if (!report) {
+    return null;
+  }
+
+  return updateReport(report.reportId, (current) => ({
+    ...current,
+    integrityStatus: "tampered",
+    blockchainStatus: "tampered",
+    previousBlockchainStatus: current.previousBlockchainStatus || current.blockchainStatus,
+    tamperDetectedAt: new Date().toISOString(),
+    tamperReason: "same_filename_duplicate_upload",
+    tamperEvidence: {
+      attemptedFileName: attemptedFileName || current.originalFileName,
+      storedHash: current.sha256,
+      attemptedHash,
+    },
+  }));
+}
+
+function rejectIfExactFileNameExists({ abhaId, fileName, sha256: digest }) {
+  const existingReport = findExactFileNameMatch({ abhaId, fileName });
+
+  if (!existingReport) {
+    return null;
+  }
+
+  const tamperedReport = markReportTampered(existingReport, digest, fileName);
+  const error = new Error(
+    `A report named "${existingReport.originalFileName}" already exists. Duplicate report name detected: report is tampered.`
+  );
+  error.statusCode = 409;
+  error.code = "REPORT_TAMPERED_DUPLICATE_NAME";
+  error.report = tamperedReport || existingReport;
+  throw error;
+}
+
 async function saveReport({ abhaId, fileName, mimeType, contentBase64, notes }) {
   ensureStore();
 
@@ -62,6 +134,10 @@ async function saveReport({ abhaId, fileName, mimeType, contentBase64, notes }) 
     throw new Error("Uploaded report content is empty.");
   }
 
+  const digest = sha256(buffer);
+  rejectIfExactFileNameExists({ abhaId, fileName, sha256: digest });
+  const similarReport = findSimilarFileNameMatch({ abhaId, fileName });
+
   const reportId = crypto.randomUUID();
   const storageRecord = await persistReportBinary({
     buffer,
@@ -69,7 +145,6 @@ async function saveReport({ abhaId, fileName, mimeType, contentBase64, notes }) 
     fileName,
     mimeType,
   });
-  const digest = sha256(buffer);
 
   const reportRecord = {
     reportId,
@@ -92,7 +167,21 @@ async function saveReport({ abhaId, fileName, mimeType, contentBase64, notes }) 
     blockchainStatus: "pending_external_sync",
   };
 
-  return persistReportRecord(reportRecord);
+  const savedReport = persistReportRecord(reportRecord);
+  if (!similarReport) {
+    return savedReport;
+  }
+
+  return {
+    ...savedReport,
+    uploadWarning: {
+      code: "SIMILAR_REPORT_NAME_FOUND",
+      message: `A similar report name already exists: "${similarReport.originalFileName}". This might be tampered; send it for doctor review.`,
+      matchedReportId: similarReport.reportId,
+      matchedFileName: similarReport.originalFileName,
+      doctorReviewRecommended: true,
+    },
+  };
 }
 
 function saveReportHashOnly({ abhaId, fileName, sha256: providedHash, notes }) {
@@ -102,12 +191,15 @@ function saveReportHashOnly({ abhaId, fileName, sha256: providedHash, notes }) {
   if (!digest) {
     throw new Error("sha256 is required when uploading a hash-only report.");
   }
+  const originalFileName = fileName || "report.hash";
+  rejectIfExactFileNameExists({ abhaId, fileName: originalFileName, sha256: digest });
+  const similarReport = findSimilarFileNameMatch({ abhaId, fileName: originalFileName });
 
   const reportId = crypto.randomUUID();
-  return persistReportRecord({
+  const savedReport = persistReportRecord({
     reportId,
     abhaId,
-    originalFileName: fileName || "report.hash",
+    originalFileName,
     mimeType: "text/plain",
     sizeBytes: 0,
     uploadedAt: new Date().toISOString(),
@@ -124,6 +216,21 @@ function saveReportHashOnly({ abhaId, fileName, sha256: providedHash, notes }) {
     integrityStatus: "hash_supplied_locally",
     blockchainStatus: "pending_external_sync",
   });
+
+  if (!similarReport) {
+    return savedReport;
+  }
+
+  return {
+    ...savedReport,
+    uploadWarning: {
+      code: "SIMILAR_REPORT_NAME_FOUND",
+      message: `A similar report name already exists: "${similarReport.originalFileName}". This might be tampered; send it for doctor review.`,
+      matchedReportId: similarReport.reportId,
+      matchedFileName: similarReport.originalFileName,
+      doctorReviewRecommended: true,
+    },
+  };
 }
 
 function getReportById(reportId) {
@@ -167,11 +274,38 @@ async function verifyReportIntegrity(reportId) {
   };
 }
 
+async function simulateReportTamper(reportId) {
+  const report = getReportById(reportId);
+  if (!report) {
+    return null;
+  }
+
+  if (report.storageMode === "hash_only") {
+    throw new Error("Hash-only reports cannot simulate file tampering because no file is stored.");
+  }
+
+  const originalBuffer = await readReportBuffer(report);
+  const tamperMarker = Buffer.from(
+    `\n\nNEUROLEDGER_TAMPER_SIMULATION ${new Date().toISOString()}\n`,
+    "utf8"
+  );
+  const tamperedBuffer = Buffer.concat([originalBuffer, tamperMarker]);
+  const storageResult = await overwriteReportBuffer(report, tamperedBuffer);
+
+  return {
+    report,
+    storageResult,
+    tamperedBytes: tamperedBuffer.length,
+  };
+}
+
 module.exports = {
   getReportById,
   listReportsByAbhaId,
+  markReportTampered,
   saveReport,
   saveReportHashOnly,
+  simulateReportTamper,
   updateReport,
   verifyReportIntegrity,
 };

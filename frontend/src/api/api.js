@@ -31,7 +31,10 @@ async function request(path, options = {}) {
   if (!response.ok) {
     const detail =
       typeof data === "string" ? data : data?.detail || data?.error || JSON.stringify(data);
-    throw new Error(detail);
+    const error = new Error(detail);
+    error.status = response.status;
+    error.payload = data;
+    throw error;
   }
 
   return data;
@@ -66,6 +69,17 @@ export async function runManualAnalysis(abhaId, metrics) {
   });
 }
 
+export async function analyzeLatestWearable(abhaId) {
+  return request(`/api/patients/${encodeURIComponent(abhaId)}/wearables/analyze`, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+}
+
+export async function getWearableMlTrend(abhaId) {
+  return request(`/api/patients/${encodeURIComponent(abhaId)}/wearables/ml-trend`);
+}
+
 export async function getDashboard(abhaId) {
   return request(`/api/patients/${encodeURIComponent(abhaId)}/dashboard`);
 }
@@ -86,6 +100,13 @@ export async function finalizeBlockchain(reportId) {
 
 export async function verifyReport(reportId) {
   return request(`/api/reports/${encodeURIComponent(reportId)}/verify`);
+}
+
+export async function simulateReportTamper(reportId) {
+  return request(`/api/reports/${encodeURIComponent(reportId)}/simulate-tamper`, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
 }
 
 export async function verifyReportHash(hash) {

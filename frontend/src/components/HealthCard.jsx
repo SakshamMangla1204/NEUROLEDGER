@@ -1,10 +1,9 @@
-export default function HealthCard({ label, value, tone = "primary" }) {
+export default function HealthCard({ label, value, meta, tone = "primary" }) {
   return (
-    <article className="stat-card">
+    <article className={`stat-card stat-card-${tone}`}>
       <p className="stat-label">{label}</p>
-      <p className="stat-value" style={{ color: `var(--${tone})` }}>
-        {value}
-      </p>
+      <p className="stat-value">{value}</p>
+      {meta ? <p className="stat-meta">{meta}</p> : null}
     </article>
   );
 }

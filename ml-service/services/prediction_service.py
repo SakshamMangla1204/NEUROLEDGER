@@ -63,6 +63,13 @@ def predict_health(health_data: PredictRequest) -> PredictResponse:
     guardrail_result = enforce_guardrails(
         overall_score=overall_score,
         trend_flags=trend_result["trend_flags"],
+        cardio_score=cardio_score,
+        glucose_score=glucose_score,
+        fatigue_score=fatigue_score,
+        sleep_hours=health_data.sleep_hours,
+        workout_minutes=health_data.workout_minutes,
+        glucose=health_data.glucose,
+        resting_hr=health_data.resting_heart_rate,
     )
     doctor_review_required = (
         doctor_review_required or guardrail_result["doctor_review_required"]

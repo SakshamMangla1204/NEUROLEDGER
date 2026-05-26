@@ -5,4 +5,8 @@ venv/
 artifacts/
 cache/
 dist/
+*.log
 .DS_Store
+android-gateway/.gradle/
+android-gateway/app/build/
+android-gateway/local.properties

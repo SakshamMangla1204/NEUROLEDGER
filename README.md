@@ -68,6 +68,27 @@ The blockchain hash ledger is intended to stay local. If you want S3-backed medi
 
 If you already built the frontend with `npm run build` inside `frontend/`, you can also open the backend-served app at `http://127.0.0.1:5050`.
 
+### Android Gateway Demo
+
+`android-gateway/` is a runnable Kotlin Android app for the mobile side of the prototype:
+
+`Health Connect or demo metrics -> Android Gateway -> backend /api/health-metrics -> web dashboard`
+
+Build the debug APK from VS Code:
+
+```powershell
+cd android-gateway
+.\Build-AndroidGateway.bat
+```
+
+Install and launch on a connected emulator or phone:
+
+```powershell
+.\Install-AndroidGateway.bat
+```
+
+The emulator default backend URL is `http://10.0.2.2:5050/api/`. For a real phone, use the laptop's Wi-Fi IP in the app's Identity screen, for example `http://192.168.1.8:5050/api/`.
+
 ### Example Mock ID
 
 - `saksham@abdm`

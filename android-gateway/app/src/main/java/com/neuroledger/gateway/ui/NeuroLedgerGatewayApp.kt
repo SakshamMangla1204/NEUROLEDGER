@@ -95,7 +95,9 @@ fun NeuroLedgerGatewayApp(serviceLocator: ServiceLocator) {
                 IdentityScreen(
                     state = state,
                     onAbhaIdChange = identityViewModel::onAbhaIdChanged,
-                    onSaveClick = identityViewModel::saveAbhaId
+                    onBackendUrlChange = identityViewModel::onBackendUrlChanged,
+                    onSaveClick = identityViewModel::saveAbhaId,
+                    onVerifyClick = identityViewModel::verifyIdentity
                 )
             }
             composable(GatewayDestination.Sync.route) {
@@ -106,6 +108,10 @@ fun NeuroLedgerGatewayApp(serviceLocator: ServiceLocator) {
                     permissionContract = syncViewModel.permissionContract(),
                     onPermissionsResult = syncViewModel::onPermissionsResult,
                     onRefreshMetrics = syncViewModel::loadLatestMetrics,
+                    onDemoSyncClick = {
+                        syncViewModel.syncDemoWithNeuroLedger()
+                        statusViewModel.refresh()
+                    },
                     onSyncClick = {
                         syncViewModel.syncWithNeuroLedger()
                         statusViewModel.refresh()

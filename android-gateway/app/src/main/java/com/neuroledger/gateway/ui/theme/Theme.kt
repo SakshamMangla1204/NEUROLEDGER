@@ -21,9 +21,9 @@ private val AppColorScheme = lightColorScheme(
 )
 
 private val AppShapes = Shapes(
-    small = RoundedCornerShape(14.dp),
-    medium = RoundedCornerShape(18.dp),
-    large = RoundedCornerShape(24.dp)
+    small = RoundedCornerShape(6.dp),
+    medium = RoundedCornerShape(8.dp),
+    large = RoundedCornerShape(8.dp)
 )
 
 @Composable

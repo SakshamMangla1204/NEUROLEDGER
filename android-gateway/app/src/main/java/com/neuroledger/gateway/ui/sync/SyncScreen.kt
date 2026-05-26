@@ -5,17 +5,24 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.neuroledger.gateway.ui.theme.BackgroundWhite
 import com.neuroledger.gateway.ui.theme.DeepNavy
@@ -30,6 +37,7 @@ fun SyncScreen(
     permissions: Set<String>,
     permissionContract: androidx.activity.result.contract.ActivityResultContract<Set<String>, Set<String>>,
     onPermissionsResult: () -> Unit,
+    onPermissionLaunchFailed: (String?) -> Unit,
     onRefreshMetrics: () -> Unit,
     onDemoSyncClick: () -> Unit,
     onSyncClick: () -> Unit
@@ -42,18 +50,26 @@ fun SyncScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundWhite)
+            .verticalScroll(rememberScrollState())
+            .imePadding()
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Sync",
+            text = "Data Sync",
             style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
             color = DeepNavy
+        )
+        Text(
+            text = "Read Health Connect data when available, or use demo sync for a reliable presentation.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary
         )
 
         Card(
             colors = CardDefaults.cardColors(containerColor = BackgroundWhite),
-            shape = MaterialTheme.shapes.large,
+            shape = MaterialTheme.shapes.medium,
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
@@ -68,18 +84,22 @@ fun SyncScreen(
                     text = if (state.permissionsGranted) "Permission Granted" else "Permission Required",
                     color = if (state.permissionsGranted) VerificationGreen else RiskAmber
                 )
-                Button(
-                    onClick = { permissionLauncher.launch(permissions) },
+                OutlinedButton(
+                    enabled = state.canRequestPermissions,
+                    onClick = {
+                        runCatching { permissionLauncher.launch(permissions) }
+                            .onFailure { onPermissionLaunchFailed(it.message) }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Grant Health Connect Permissions")
+                    Text(if (state.canRequestPermissions) "Grant Permissions" else "Health Connect Unavailable")
                 }
             }
         }
 
         Card(
             colors = CardDefaults.cardColors(containerColor = BackgroundWhite),
-            shape = MaterialTheme.shapes.large,
+            shape = MaterialTheme.shapes.medium,
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
@@ -93,7 +113,7 @@ fun SyncScreen(
                 MetricRow("Steps", state.metrics.steps.toString())
                 MetricRow("Sleep hours", String.format("%.1f", state.metrics.sleepHours))
                 MetricRow("Glucose", "${state.metrics.glucose} mg/dL")
-                Button(onClick = onRefreshMetrics, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onRefreshMetrics, modifier = Modifier.fillMaxWidth()) {
                     Text("Read Latest Health Connect Data")
                 }
                 Button(onClick = onDemoSyncClick, modifier = Modifier.fillMaxWidth()) {
@@ -123,6 +143,7 @@ fun SyncScreen(
                 )
             }
         }
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
@@ -132,7 +153,7 @@ private fun MetricRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge)
-        Text(value, style = MaterialTheme.typography.titleMedium)
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+        Text(value, style = MaterialTheme.typography.titleMedium, color = DeepNavy)
     }
 }

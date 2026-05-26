@@ -16,7 +16,8 @@ class SyncViewModel(
     private val _state = MutableStateFlow(
         SyncUiState(
             permissionsGranted = false,
-            healthConnectStatus = healthConnectText(repository.sdkStatus())
+            healthConnectStatus = healthConnectText(repository.sdkStatus()),
+            canRequestPermissions = repository.sdkStatus() == HealthConnectClient.SDK_AVAILABLE
         )
     )
     val state: StateFlow<SyncUiState> = _state.asStateFlow()
@@ -30,13 +31,20 @@ class SyncViewModel(
             val granted = repository.hasAllPermissions()
             _state.value = _state.value.copy(
                 permissionsGranted = granted,
-                healthConnectStatus = healthConnectText(repository.sdkStatus())
+                healthConnectStatus = healthConnectText(repository.sdkStatus()),
+                canRequestPermissions = repository.sdkStatus() == HealthConnectClient.SDK_AVAILABLE
             )
         }
     }
 
     fun onPermissionsResult() {
         refreshPermissionStatus()
+    }
+
+    fun onPermissionLaunchFailed(message: String? = null) {
+        _state.value = _state.value.copy(
+            errorMessage = message ?: "Health Connect permission screen is unavailable on this device. Use demo sync or install/update Health Connect."
+        )
     }
 
     fun loadLatestMetrics() {
@@ -104,6 +112,7 @@ class SyncViewModel(
 data class SyncUiState(
     val metrics: WearableMetrics = WearableMetrics(),
     val permissionsGranted: Boolean = false,
+    val canRequestPermissions: Boolean = false,
     val healthConnectStatus: String = "",
     val isSyncing: Boolean = false,
     val lastRiskLevel: String = "--",

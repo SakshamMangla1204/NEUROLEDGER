@@ -5,16 +5,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.neuroledger.gateway.ui.theme.BackgroundWhite
 import com.neuroledger.gateway.ui.theme.DeepNavy
@@ -33,18 +38,26 @@ fun IdentityScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundWhite)
+            .verticalScroll(rememberScrollState())
+            .imePadding()
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Identity",
+            text = "NeuroLedger Gateway",
             style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
             color = DeepNavy
+        )
+        Text(
+            text = "Connect this phone to the local NeuroLedger demo backend.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary
         )
 
         Card(
             colors = CardDefaults.cardColors(containerColor = BackgroundWhite),
-            shape = MaterialTheme.shapes.large,
+            shape = MaterialTheme.shapes.medium,
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
@@ -72,7 +85,7 @@ fun IdentityScreen(
                 Button(onClick = onSaveClick, modifier = Modifier.fillMaxWidth()) {
                     Text("Save")
                 }
-                Button(onClick = onVerifyClick, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onVerifyClick, modifier = Modifier.fillMaxWidth()) {
                     Text("Verify With NeuroLedger")
                 }
                 if (state.isVerifying) {
@@ -83,7 +96,7 @@ fun IdentityScreen(
 
         Card(
             colors = CardDefaults.cardColors(containerColor = BackgroundWhite),
-            shape = MaterialTheme.shapes.large,
+            shape = MaterialTheme.shapes.medium,
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(

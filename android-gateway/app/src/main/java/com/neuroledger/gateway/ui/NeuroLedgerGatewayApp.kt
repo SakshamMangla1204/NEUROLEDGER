@@ -107,6 +107,7 @@ fun NeuroLedgerGatewayApp(serviceLocator: ServiceLocator) {
                     permissions = syncViewModel.requiredPermissions(),
                     permissionContract = syncViewModel.permissionContract(),
                     onPermissionsResult = syncViewModel::onPermissionsResult,
+                    onPermissionLaunchFailed = syncViewModel::onPermissionLaunchFailed,
                     onRefreshMetrics = syncViewModel::loadLatestMetrics,
                     onDemoSyncClick = {
                         syncViewModel.syncDemoWithNeuroLedger()
